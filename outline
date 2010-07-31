@@ -1,0 +1,46 @@
+Photocat Software Functionality
+
+*Command Line Options:
+1)  Accept .jpg .thm, .avi, .csv, & .gpx formats with wildcard expansion
+2)  Accept switch operators, including --log, --verbose, --directory, --autorotate, --optimizations, --geotag, --geoprecision (script defaults to always creating a new directory hierarchy in current directory & writing comment/copyright tags).
+
+
+*Identify file type, and proceed to respective function
+
+*If it is a .jpg file do:
+1)   Read-in its EXIF data
+2)   Normalize DateTimeOriginal to UTC + tzOffset, log original filename & size (--log)
+3)   Remove jpg thumbnail, log new size (--log, --optimizations)
+4)   Read Orientation tag, rotate photo if neccessary, reset Orientation tag (--autorotate)
+5)   Optimize jpg entropy, log new size (--log, --optimizations)
+6)   Save jpg in progressive, log new size (--log, --optimizations)
+7)   Update EXIF comment tag with original filename, filesize, and % saved
+8)   Update EXIF comment tag with Photocat version & switches used
+9)   Update EXIF copyright tag with year photo taken, Ronald Bynoe, and CC license
+10)  Is the image already Geotagged?  If so skip step 11 & update database with GPS location, UTC time/date of photo + tzOffset.
+11)  Correlate DateTimeOriginal to nearest location in database, write out GPS tags if GeoMaxExtSecs is within range (--geotag, --geoprecision)
+12)  Move file to new directory and rename to Photo_HHMM(ss).jpeg (--directory)
+13)  Write out log file (--log)
+14)  Update database with new entry including location of photo, time it was taken, and associated GPS position
+
+*If it is a .thm file do:
+1)   Determine whether corresponding .avi exists
+2)   Perform auto-rotation of video based on Orientation tag, if possible losslessly?
+3)   Update EXIF comment, copyright, & GPS tags if possible
+4)   Move files to new directory and rename to Movie_HHMM(ss).{thm,avi}
+5)   Log all operations & update database with new entry
+
+*If it is a .gpx file do:
+1)   Determine whether data is in a sane & expected usable format, check for Timezone information
+2)   If no timezone information exists, query GeoNames perl module for timezone of location
+3)   Update times to be in UTC + tzOffset
+4)   Update database with GPS coordinates, UTC time/date + tzOffset, and any additional data (satellites, accuracy, speed, heading, etc).
+
+*If it is a .csv file do:
+1)   Subsequent sanity checks, to ensure .csv is in normalized format initially (date, coordinates, labels, new data, etc.) TBD
+2)   Update database with new data matching the timestamps (converted to UTC if possible) of .csv file to timestamps in database, fail if unable to match or if the timestamps are outside of --geoprecision.
+
+Additionally the script should always automatically do the following (except for .csv files):
+1)  All operations should update the daily KML file with relative links to all files added (.thm and matching .avi should be treated as one file) along with all datapoints from .gpx & log file (from Instamapper) including twitter updates, e-mail updates, and auto-generated routes.
+2)  All operations should update the monthly KML file with 1 datapoint every 15 minutes in addition to an entry for all data (images, videos, e-mail, twitter, etc) and plot a route between them.  Potentially link to daily KML by creating a waypoint for the first entry of each day?
+3)  All operations should update the yearly KML file with only datapoints for all data (images, videos, e-mail, twitter, etc) perhaps excluding a route between them?  Potentially link to monthly KML by creating a waypoint for the first entry of each month?

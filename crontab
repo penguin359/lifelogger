@@ -1,0 +1,9 @@
+PATH=/home/johndoe/geotag:/usr/local/bin:/usr/bin:/bin
+PERL5LIB=/home/johndoe/geotag
+
+0,15,30,45 4-20 * * * updatelocation.pl
+5,10,20,25,35,40,50,55 4-20 * * * updatelocation.pl -n
+*/10 21-23 * * * updatelocation.pl -s
+*/10 0-3 * * * updatelocation.pl -s
+*/10 * * * * mobile.pl
+3 * * * * wget -q -O /tmp/twitter.rss http://twitter.com/statuses/user_timeline/783214.rss && TZ=GMT rss.pl /tmp/twitter.rss; rm /tmp/twitter.rss

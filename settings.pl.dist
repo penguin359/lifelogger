@@ -1,0 +1,12 @@
+use 5.008;
+use warnings;
+use strict;
+
+use utf8;
+
+
+$apiKey = "584014439054448247"; # Demo Key
+
+$cwd = "/var/www/htdocs";
+
+1;
