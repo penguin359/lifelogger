@@ -17,3 +17,4 @@ Write out yearly KML file that includes all file/log entries.
 Extend functionality to .THM thumbnail/metadata files and their corresponding video files.
 Correctly import .GPX files into database to improve its accuracy (fixing for absent TZdata if needed).
 Correctly import .csv sensor data/other data into database and correlate time to existing location tags.
+Create list of fields in files to import
