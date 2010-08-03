@@ -1,0 +1,13 @@
+This is a collection of perl scripts for downloading location data,
+geotagging photos, and creating a KML file documenting it along with
+Twitter and other messages displayed along the path at the location it
+was made.  This KML file can then be overlayed on Google Maps or Google
+Earth.
+
+updatelocation.pl - This is the most important script as it pulls
+location data from InstaMapper and updates the path in the KML file.
+
+rss.pl - This reads a RSS feed such as Twitter and posts the comments in
+the KML file based on location data retrieved by updatelocation.pl.
+
+mobile.pl - This creates a mobile version of the KML file.
