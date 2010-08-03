@@ -1,16 +1,20 @@
-Install Photocatalog in 3 easy steps.
+Install Photocatalog in 3 easy steps.  Lines beginning with $ are
+commands to run as a local user and lines beginning with # are run as
+root.
 
-1.  Run the installer
+1.  Run the installer.  Add -f to install.pl to overwrite existing
+configuration files.
 
-./install.pl
+	$ ./install.pl
 
-2.  Setup Crontab based on example crontab
+2.  Setup Crontab based on example crontab created by installer.
 
-crontab -e
+	$ crontab -e
 
-3.  Setup email alias in /etc/mail/aliases
+3.  (optional) Setup email alias in /etc/mail/aliases.
 
-photocatalog	"|/path/to/email.pl"
+	Copy the example alias from example aliases to the system
+	aliases file.
+	# newaliases
 
-
-See README for for information.
+See README for more information.

@@ -1,4 +1,6 @@
+^aliases$
 ^crontab$
+^images/
 ^live.atom$
 ^live.kml$
 ^live.rss$
@@ -6,3 +8,4 @@
 ^location.csv$
 ^timestamp$
 ^settings.pl$
+^uploads/

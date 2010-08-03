@@ -4,10 +4,27 @@ Twitter and other messages displayed along the path at the location it
 was made.  This KML file can then be overlayed on Google Maps or Google
 Earth.
 
+This files are listed roughly in order of importance.
+
+install.pl - Installer.  See INSTALL for usage.
+
 updatelocation.pl - This is the most important script as it pulls
 location data from InstaMapper and updates the path in the KML file.
+
+lock-kml.pl - Locks the KML file for 10 minutes.  Useful when hand
+editing the KML file to prevent cron jobs from interfering.
 
 rss.pl - This reads a RSS feed such as Twitter and posts the comments in
 the KML file based on location data retrieved by updatelocation.pl.
 
+scan.pl - Scans a directory for photos and updates KML with them.
+
+email.pl - Received email and extracts photos and descriptions from them.
+
 mobile.pl - This creates a mobile version of the KML file.
+
+timediff.pl - Scans CSV file for large gaps in updates and reports them.
+
+geotag.pl - (Not ready yet.)
+
+test.pl - (Not ready yet.)

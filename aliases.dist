@@ -1,0 +1,7 @@
+# This is an example aliases file that should be added to the system
+# aliases file, most likely at /etc/mail/aliases.  The email will be
+# scanned for images and the subject will be the image description.
+photocatalog: "|TZ=GMT @@CWD@@/email.pl"
+
+# This version also sends a copy of the email to the webmaster.
+#photocatalog: @@EMAIL@@, "|TZ=GMT @@CWD@@/email.pl"

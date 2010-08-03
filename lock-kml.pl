@@ -38,12 +38,11 @@ use vars qw($apiKey $cwd);
 use POSIX qw(strftime);
 use Fcntl ':flock';
 
-require 'settings.pl';
 require 'common.pl';
 
 my $self = init();
 print "Waiting for lock...\n";
 lockKml($self);
-print "Locked.\n";
+print "Locked for 10 minutes.\n";
 sleep 600;
-print "Unlocked.\n";
+print "Lock released.\n";

@@ -120,6 +120,7 @@ sub installFile {
 	close $inFd;
 }
 
+installFile("aliases");
 installFile("crontab");
 installFile("live.atom");
 installFile("live.kml");
