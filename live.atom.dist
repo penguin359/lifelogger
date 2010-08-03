@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
-  <title>My Adventurous Life</title>
+  <title>@@TITLE@@</title>
   <id>urn:uuid:11111111-1111-1111-1111-111111111111</id>
   <author>
-    <name>John Doe</name>
-    <email>webmaster@example.org</email>
-    <uri>http://www.example.org/</uri>
+    <name>@@AUTHOR@@</name>
+    <email>@@EMAIL@@</email>
+    <uri>@@WEBSITE@@</uri>
   </author>
   <updated>2010-01-01T00:00:00Z</updated>
   <link rel="self" type="application/atom+xml" href="http://www.example.org/live.atom"/>

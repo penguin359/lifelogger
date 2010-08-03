@@ -8,14 +8,14 @@
  xmlns:admin="http://webns.net/mvcb/"
 >
   <channel>
-    <title>My Adventurous Life</title>
-    <link>http://www.example.org/</link>
+    <title>@@TITLE@@</title>
+    <link>@@WEBSITE@@</link>
     <description>My life is very adventurous!</description>
     <language>en</language>
     <copyright>Copyright © 2010, example.org</copyright>
     <pubDate>Fri, 01 Jan 2010 00:00:00 GMT</pubDate>
     <lastBuildDate>Fri, 01 Jan 2010 00:00:00 GMT</lastBuildDate>
-    <managingEditor>webmaster@example.org (John Doe)</managingEditor>
-    <webMaster>webmaster@example.org (John Doe)</webMaster>
+    <managingEditor>@@EMAIL@@ (@@AUTHOR@@)</managingEditor>
+    <webMaster>@@EMAIL@@ (@@AUTHOR@@)</webMaster>
 </channel>
 </rss>
