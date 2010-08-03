@@ -9,4 +9,8 @@ $apiKey = "@@APIKEY@@";
 
 $cwd = "@@CWD@@";
 
+$dataSource = "DBI:Pg:dbname=photocatalog;host=localhost";
+$dbUser = "user";
+$dbPass = "S3cr3t!";
+
 1;

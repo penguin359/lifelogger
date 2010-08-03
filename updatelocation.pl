@@ -170,5 +170,5 @@ if(defined($currentPosition)) {
 
 saveKml($self, $doc);
 
-openDB($self);
-insertDB($self);
+#openDB($self);
+#insertDB($self);
