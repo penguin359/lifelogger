@@ -34,11 +34,16 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use POSIX qw(getcwd);
 
 
 my $force = 0;
 if(defined($ARGV[0])) {
-	$force = 1 if $ARGV[0] eq "-f";
+	if($ARGV[0] eq "-f") {
+		$force = 1;
+	} else {
+		die "Usage: $0 [-f]";
+	}
 }
 
 sub ask {
@@ -52,24 +57,37 @@ sub ask {
 	return $answer;
 }
 
+die "Please run installer.pl from top-level of checkout" if ! -f 'settings.pl.dist';
+
+print "Installing Photocatalog\n";
+print "\n";
+print "Checking dependencies...\n";
 foreach my $lib (
+    "Image::ExifTool",
+    "MIME::Tools",
     "XML::DOM",
     "XML::DOM::XPath",
     "HTTP::Request",
     "XML::RSS",
-    "XML::Atom::Feed") {
+    "XML::Atom",
+    "DBI") {
 	eval "require $lib"; print STDERR "Need to install $lib\n" if $@;
 }
 
-my $author = ask("Author", "John Doe");
-my $website = ask("Website", "http://www.example.org/");
-my $email = ask("E-Mail", "webmaster\@example.org");
+print "\n";
 my $title = ask("Title", "My Adventurous Life");
+my $author = ask("Author", "John Doe");
+my $email = ask("E-Mail", "webmaster\@example.org");
+my $website = ask("Website", "http://www.example.org/");
+my $apiKey = ask("Instamapper API Key", "584014439054448247");
+my $cwd = getcwd;
+print "\n";
 
 sub installFile {
 	my ($file) = @_;
 
 	return if -f $file && !$force;
+	print "Installing $file\n";
 	open my $inFd, "$file.dist" or die "Can't open $file.dist";
 	open my $outFd, ">$file" or die "Can't open $file";
 	my $line;
@@ -87,6 +105,10 @@ sub installFile {
 				$var = $email;
 			} elsif($var eq "TITLE") {
 				$var = $title;
+			} elsif($var eq "APIKEY") {
+				$var = $apiKey;
+			} elsif($var eq "CWD") {
+				$var = $cwd;
 			} else {
 				die "Unknown variable $var";
 			}
@@ -98,8 +120,9 @@ sub installFile {
 	close $inFd;
 }
 
+installFile("crontab");
 installFile("live.atom");
 installFile("live.kml");
 installFile("live.rss");
-#installFile("locations.csv");
+installFile("location.csv");
 installFile("settings.pl");

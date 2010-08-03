@@ -5,8 +5,8 @@ use strict;
 use utf8;
 
 
-$apiKey = "584014439054448247"; # Demo Key
+$apiKey = "@@APIKEY@@";
 
-$cwd = "/var/www/htdocs";
+$cwd = "@@CWD@@";
 
 1;

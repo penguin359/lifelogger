@@ -1,0 +1,16 @@
+Install Photocatalog in 3 easy steps.
+
+1.  Run the installer
+
+./install.pl
+
+2.  Setup Crontab based on example crontab
+
+crontab -e
+
+3.  Setup email alias in /etc/mail/aliases
+
+photocatalog	"|/path/to/email.pl"
+
+
+See README for for information.
