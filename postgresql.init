@@ -1,0 +1,12 @@
+CREATE SEQUENCE locations_seq;
+CREATE TABLE locations (
+	id		INTEGER	DEFAULT nextval('locations_seq') PRIMARY KEY,
+	timestamp	TIMESTAMP NOT NULL,
+	source		INTEGER NOT NULL,
+	latitude	REAL NOT NULL,
+	longitude	REAL NOT NULL,
+	altitude	REAL,
+	heading		REAL,
+	speed		REAL
+);
+CREATE UNIQUE INDEX locations_idx ON locations(timestamp, source);

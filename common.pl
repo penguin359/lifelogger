@@ -32,11 +32,15 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use vars qw($apiKey $cwd $dataSource $dbUser $dbPass);
 use Fcntl ':flock';
 use Encode;
 use XML::RSS;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
+use DBI;
+
+require 'settings.pl';
 
 my $dataFile = "$cwd/location.csv";
 my $kmlFile = "$cwd/live.kml";
@@ -375,6 +379,20 @@ sub lockKml {
 	open(my $fd, $kmlFile) or die "Can't open kml file for locking";
 	flock($fd, LOCK_EX) or die "Can't establish file lock";
 	$self->{lockFd} = $fd;
+}
+
+sub insertDB {
+	my($self) = @_;
+
+	$self->{dbh}->do("INSERT INTO locations (source, timestamp, latitude, longitude) VALUES (1, '2010-07-31 14:30', 10, 20)");
+}
+
+sub openDB {
+	my($self) = @_;
+
+	return if exists($self->{dbh});
+	my $dbh = DBI->connect($dataSource, $dbUser, $dbPass);
+	$self->{dbh} = $dbh;
 }
 
 sub init {

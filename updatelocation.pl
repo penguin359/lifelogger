@@ -42,6 +42,7 @@ use XML::DOM::XPath;
 use HTTP::Request;
 use Data::Dumper;
 
+require 'common.pl';
 require 'settings.pl';
 
 my $slow = 0;
@@ -54,8 +55,6 @@ if(defined($ARGV[0])) {
 #print "Yes\n" if $slow;
 #print "N: '$makeMark'\n";
 #print "Yes\n" if $makeMark;
-
-require 'common.pl';
 
 my $self = init();
 lockKml($self);
@@ -170,3 +169,6 @@ if(defined($currentPosition)) {
 }
 
 saveKml($self, $doc);
+
+openDB($self);
+insertDB($self);
