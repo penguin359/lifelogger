@@ -91,7 +91,7 @@ sub addImage {
 		$longitude = $5 + ($6 + $7/60)/60;
 		$longitude *= -1 if $8 eq "W";
 	} else {
-		my $entry = closestEntry($timestamp);
+		my $entry = closestEntry($self, $timestamp);
 		$latitude = $entry->{latitude};
 		$longitude = $entry->{longitude};
 		$altitude = $entry->{altitude};

@@ -78,7 +78,7 @@ if(exists $info->{DateTimeOriginal}) {
 if($timestamp <= 981119752) {
 	die "Image timestamp is out of bounds!"
 }
-my $entry = closestEntry($timestamp);
+my $entry = closestEntry($self, $timestamp);
 print Dumper($entry);
 if(abs($entry->{timestamp} - $timestamp) > 600) {
 	die "Image timestamp ($timestamp) not close to any GPS entry ($entry->{timestamp}) offset is:  " . abs(($timestamp - $entry->{timestamp})/60) . " minutes.";

@@ -82,6 +82,7 @@ my $newEntries = [];
 #print "wget -O - 'http://www.instamapper.com.ipv6.sixxs.org/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp'\n";
 #exit 0;
 #open(my $wgetFd, "wget -q -O - 'http://www.instamapper.com.ipv6.sixxs.org/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp'|") or die "failed to retrieve InstaMapper data";
+#print "wget -q -O - 'http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp'\n";
 open(my $wgetFd, "wget -q -O - 'http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp'|") or die "failed to retrieve InstaMapper data";
 my @lines = <$wgetFd>;
 close $wgetFd;

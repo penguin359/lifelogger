@@ -18,3 +18,18 @@ Extend functionality to .THM thumbnail/metadata files and their corresponding vi
 Correctly import .GPX files into database to improve its accuracy (fixing for absent TZdata if needed).
 Correctly import .csv sensor data/other data into database and correlate time to existing location tags.
 Create list of fields in files to import
+
+
+Loren's TODO List
+
+Turn mobile.pl into a more generic KML filter
+Improve settings infrastructure
+Better support upgrading
+PostgreSQL
+MySQL
+SQLite
+Twitter Geotagging
+Generic RSS support
+Multiple GPS sources
+Other types of GPS sources
+and much more...
