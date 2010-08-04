@@ -34,7 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use vars qw($apiKey $cwd);
 use POSIX qw(mktime strftime);
 use Fcntl ':flock';
 use XML::DOM;
@@ -43,8 +42,6 @@ use MIME::Parser;
 use MIME::WordDecoder;
 use Image::ExifTool;
 use Data::Dumper;
-
-require 'settings.pl';
 
 my $rssFile = "twitter.rss";
 $rssFile = shift if @ARGV;

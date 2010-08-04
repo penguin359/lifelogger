@@ -1,11 +1,13 @@
-^aliases$
-^crontab$
+^examples/aliases$
+^examples/crontab$
+^examples/procmailrc$
 ^images/
 ^live.atom$
 ^live.kml$
 ^live.rss$
 ^mobile.kml$
 ^location.csv$
+^overlay.kml$
 ^timestamp$
 ^settings.pl$
 ^uploads/

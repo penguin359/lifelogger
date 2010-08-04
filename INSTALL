@@ -7,14 +7,21 @@ configuration files.
 
 	$ ./install.pl
 
-2.  Setup Crontab based on example crontab created by installer.
+2.  Setup Crontab based on examples/crontab created by installer.
 
 	$ crontab -e
 
-3.  (optional) Setup email alias in /etc/mail/aliases.
+3.  (optional) Setup email alias for receiving text and photo updates.
 
-	Copy the example alias from example aliases to the system
-	aliases file.
+	Alternate 1: (requires root)
+	Copy the example alias from examples/aliases to the system
+	aliases file, most likely at /etc/aliases or /etc/mail/aliases.
 	# newaliases
+
+	- Or -
+
+	Alternate 2:
+	Copy the example procmailrc entry from examples/procmailrc to
+	your local .procmailrc in $HOME.
 
 See README for more information.

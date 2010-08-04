@@ -1,0 +1,15 @@
+PATH=@@CWD@@:$HOME/bin:/usr/local/bin:/usr/bin:/bin
+PERL5LIB=@@CWD@@
+
+# Handle incoming photos for photocatalog and send them to email.pl
+:0:
+* ^To:.*photocatalog@
+|env TZ=GMT email.pl
+
+# This example first saves a copy of the email to the photos mailbox
+# before forwarding them to email.pl
+:0c:
+* ^To:.*photocatalog@
+photos
+:0a:
+|env TZ=GMT email.pl

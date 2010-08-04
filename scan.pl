@@ -34,7 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use vars qw($apiKey $cwd);
 use POSIX qw(mktime strftime);
 use Fcntl ':flock';
 use XML::DOM;
@@ -43,7 +42,6 @@ use Image::ExifTool;
 use Encode;
 use Data::Dumper;
 
-require 'settings.pl';
 require 'common.pl';
 
 my $self = init();

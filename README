@@ -4,6 +4,9 @@ Twitter and other messages displayed along the path at the location it
 was made.  This KML file can then be overlayed on Google Maps or Google
 Earth.
 
+The latest version of photocatalog is available at:
+http://code.google.com/p/photocatalog/
+
 This files are listed roughly in order of importance.
 
 install.pl - Installer.  See INSTALL for usage.
@@ -19,7 +22,8 @@ the KML file based on location data retrieved by updatelocation.pl.
 
 scan.pl - Scans a directory for photos and updates KML with them.
 
-email.pl - Received email and extracts photos and descriptions from them.
+email.pl - Received email and extracts photos and descriptions from
+them.
 
 mobile.pl - This creates a mobile version of the KML file.
 

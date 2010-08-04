@@ -75,11 +75,23 @@ foreach my $lib (
 }
 
 print "\n";
+print <<EOF;
+Most of the functionality of these scripts currently requires an
+InstaMapper account.  The main exception are photos that have already
+been Geotagged, and soon will be Geotagged Tweets.  We plan to support
+other sources as well, but for now, you can get an InstaMapper account
+at http://www.instamapper.com/.
+
+The default API Key is a demo car that can be used for testing.  Only
+one device is supported at this time so don't use a Master API Key.
+
+EOF
+
 my $title = ask("Title", "My Adventurous Life");
 my $author = ask("Author", "John Doe");
 my $email = ask("E-Mail", "webmaster\@example.org");
 my $website = ask("Website", "http://www.example.org/");
-my $apiKey = ask("Instamapper API Key", "584014439054448247");
+my $apiKey = ask("InstaMapper API Key", "584014439054448247");
 my $cwd = getcwd;
 print "\n";
 
@@ -120,8 +132,9 @@ sub installFile {
 	close $inFd;
 }
 
-installFile("aliases");
-installFile("crontab");
+installFile("examples/aliases");
+installFile("examples/crontab");
+installFile("examples/procmailrc");
 installFile("live.atom");
 installFile("live.kml");
 installFile("live.rss");
