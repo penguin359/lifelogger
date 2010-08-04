@@ -34,7 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use vars qw($apiKey $cwd);
 use POSIX qw(mktime strftime);
 use Fcntl ':flock';
 use XML::DOM;
@@ -45,7 +44,6 @@ use Image::ExifTool;
 use Encode;
 use Data::Dumper;
 
-require 'settings.pl';
 require 'common.pl';
 
 my $descrText = "";
@@ -104,7 +102,7 @@ sub scanEntity {
 			$longitude = $5 + ($6 + $7/60)/60;
 			$longitude *= -1 if $8 eq "W";
 		} else {
-			my $entry = closestEntry($timestamp);
+			my $entry = closestEntry($self, $timestamp);
 			$latitude = $entry->{latitude};
 			$longitude = $entry->{longitude};
 			$altitude = $entry->{altitude};
@@ -188,7 +186,7 @@ $self->{matched} = 0;
 scanEntity($entity, $self, $doc, $photoBase[0]);
 if(!$self->{matched}) {
 	my $mark = createPlacemark($doc);
-	my $entry = closestEntry($self->{date});
+	my $entry = closestEntry($self, $self->{date});
 	addName($doc, $mark, $self->{subject});
 	addDescription($doc, $mark, "<p><b>$self->{subject}</b></p><p>$descrText</p>");
 	addStyle($doc, $mark, 'text');
