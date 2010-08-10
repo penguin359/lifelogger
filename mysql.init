@@ -1,0 +1,11 @@
+CREATE TABLE locations (
+	id		INTEGER	auto_increment PRIMARY KEY,
+	timestamp	TIMESTAMP NOT NULL,
+	source		INTEGER NOT NULL,
+	latitude	REAL NOT NULL,
+	longitude	REAL NOT NULL,
+	altitude	REAL,
+	heading		REAL,
+	speed		REAL
+);
+CREATE UNIQUE INDEX locations_idx ON locations(timestamp, source);

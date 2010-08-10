@@ -34,7 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use vars qw($apiKey $cwd);
 use POSIX qw(mktime strftime);
 use Fcntl ':flock';
 use XML::DOM;
@@ -46,7 +45,6 @@ use Data::Dumper;
 my $kmlFile = "live.kml";
 #my $kmlFile = "test.kml";
 
-require 'settings.pl';
 require 'common.pl';
 
 my $file = $ARGV[0];

@@ -50,6 +50,8 @@ lockKml($self);
 sub addImage {
 	my($path, $self, $doc, $base) = @_;
 
+	my $website = $self->{settings}->{website};
+
 	return if ! -f $path || ! -s $path;
 	my $exif = new Image::ExifTool;
 	open(my $fd, $path) or die "Can't open file $path";
@@ -100,9 +102,9 @@ sub addImage {
 
 	my $mark = createPlacemark($doc);
 	addName($doc, $mark, $filename);
-	addDescription($doc, $mark, "<p><b>$filename</b></p><a href=\"http://www.example.org/images/$filename\"><img src=\"http://www.example.org/images/160/$filename\"></a>");
-	addRssEntry($self->{rssFeed}, $filename, "http://www.example.org/images/$filename", "<p><b>$filename</b></p><a href=\"http://www.example.org/images/$filename\"><img src=\"http://www.example.org/images/160/$filename\"></a>");
-	addAtomEntry($self->{atomFeed}, $filename, "http://www.example.org/images/$filename", "<p><b>$filename</b></p><a href=\"http://www.example.org/images/$filename\"><img src=\"http://www.example.org/images/160/$filename\"></a>");
+	addDescription($doc, $mark, "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+	addRssEntry($self->{rssFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+	addAtomEntry($self->{atomFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, 'photo');
 	addPoint($doc, $mark, $latitude, $longitude);

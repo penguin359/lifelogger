@@ -5,12 +5,14 @@ use strict;
 use utf8;
 
 
-$apiKey = "@@APIKEY@@";
+$settings->{apiKey} = "@@APIKEY@@";
 
-$cwd = "@@CWD@@";
+$settings->{cwd} = "@@CWD@@";
 
-$dataSource = "DBI:Pg:dbname=photocatalog;host=localhost";
-$dbUser = "user";
-$dbPass = "S3cr3t!";
+$settings->{dataSource} = "DBI:Pg:dbname=photocatalog;host=localhost";
+$settings->{dbUser} = "user";
+$settings->{dbPass} = "S3cr3t!";
+
+$settings->{website} = "@@WEBSITE@@";
 
 1;

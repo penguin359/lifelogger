@@ -51,6 +51,8 @@ my $descrText = "";
 sub scanEntity {
 	my($entity, $self, $doc, $base) = @_;
 
+	my $website = $self->{settings}->{website};
+
 	my $i = 0;
 	while($entity->parts($i)) {
 		scanEntity($entity->parts($i++), $self, $doc, $base);
@@ -111,9 +113,9 @@ sub scanEntity {
 
 		my $mark = createPlacemark($doc);
 		addName($doc, $mark, $self->{subject});
-		addDescription($doc, $mark, "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"http://www.example.org/images/$filename\"><img src=\"http://www.example.org/images/160/$filename\"></a>");
-		addRssEntry($self->{rssFeed}, $self->{subject}, "http://www.example.org/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"http://www.example.org/images/$filename\"><img src=\"http://www.example.org/images/160/$filename\"></a>");
-		addAtomEntry($self->{atomFeed}, $self->{subject}, "http://www.example.org/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"http://www.example.org/images/$filename\"><img src=\"http://www.example.org/images/160/$filename\"></a>");
+		addDescription($doc, $mark, "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+		addRssEntry($self->{rssFeed}, $self->{subject}, "$website/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+		addAtomEntry($self->{atomFeed}, $self->{subject}, "$website/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
 		addTimestamp($doc, $mark, $timestamp);
 		addStyle($doc, $mark, 'photo');
 		addPoint($doc, $mark, $latitude, $longitude);

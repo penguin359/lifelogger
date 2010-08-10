@@ -32,7 +32,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use vars qw($apiKey $cwd $dataSource $dbUser $dbPass);
+use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl ':flock';
 use Encode;
 use XML::RSS;
@@ -40,13 +40,29 @@ use XML::Atom::Feed;
 use XML::Atom::Entry;
 use DBI;
 
+# Load default settings
+$settings = {};
+$settings->{apiKey} = "584014439054448247";
+$settings->{cwd} = "/var/www/htdocs";
+$settings->{dataSource} = "DBI:Pg:dbname=photocatalog;host=localhost";
+$settings->{dbUser} = "user";
+$settings->{dbPass} = "S3cr3t!";
+$settings->{website} = "http://www.example.org/";
+
 require 'settings.pl';
 
-my $dataFile = "$cwd/location.csv";
-my $kmlFile = "$cwd/live.kml";
-my $rssFile = "$cwd/live.rss";
-my $atomFile = "$cwd/live.atom";
-my $timestampFile = "$cwd/timestamp";
+# Convert from old-style settings file to new-style.
+$settings->{apiKey} = $apiKey if defined($apiKey);
+$settings->{cwd} = $cwd if defined($cwd);
+$settings->{dataSource} = $dataSource if defined($dataSource);
+$settings->{dbUser} = $dbUser if defined($dbUser);
+$settings->{dbPass} = $dbPass if defined($dbPass);
+
+my $dataFile = "$settings->{cwd}/location.csv";
+my $kmlFile = "$settings->{cwd}/live.kml";
+my $rssFile = "$settings->{cwd}/live.rss";
+my $atomFile = "$settings->{cwd}/live.atom";
+my $timestampFile = "$settings->{cwd}/timestamp";
 
 $XML::Atom::DefaultVersion = "1.0";
 $XML::Atom::ForceUnicode = 1;
@@ -398,7 +414,9 @@ sub openDB {
 sub init {
 	my $self = {};
 
-	chdir $cwd;
+	$self->{settings} = $settings;
+
+	chdir $settings->{cwd};
 	umask 0022;
 
 	return $self;

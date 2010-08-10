@@ -34,7 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use vars qw($apiKey $cwd);
 use POSIX qw(strftime);
 use Fcntl ':flock';
 use XML::DOM;
@@ -43,13 +42,17 @@ use HTTP::Request;
 use Data::Dumper;
 
 require 'common.pl';
-require 'settings.pl';
 
 my $slow = 0;
 my $makeMark = 1;
 if(defined($ARGV[0])) {
-	$slow = 1 if $ARGV[0] eq "-s";
-	$makeMark = 0 if $ARGV[0] eq "-n";
+	if($ARGV[0] eq "-s") {
+		$slow = 1;
+	} elsif($ARGV[0] eq "-n") {
+		$makeMark = 0;
+	} else {
+		die "Usage: $0 [-n | -s]";
+	}
 }
 #print "S: '$slow'\n";
 #print "Yes\n" if $slow;
@@ -58,6 +61,8 @@ if(defined($ARGV[0])) {
 
 my $self = init();
 lockKml($self);
+
+my $apiKey = $self->{settings}->{apiKey};
 
 my $entries = loadData($self);
 my $lastTimestamp = lastTimestamp($self);
