@@ -53,10 +53,6 @@ if(defined($ARGV[0])) {
 		die "Usage: $0 [-n | -s]";
 	}
 }
-#print "S: '$slow'\n";
-#print "Yes\n" if $slow;
-#print "N: '$makeMark'\n";
-#print "Yes\n" if $makeMark;
 
 my $self = init();
 lockKml($self);

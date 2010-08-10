@@ -30,5 +30,3 @@ mobile.pl - This creates a mobile version of the KML file.
 timediff.pl - Scans CSV file for large gaps in updates and reports them.
 
 geotag.pl - (Not ready yet.)
-
-test.pl - (Not ready yet.)

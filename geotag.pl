@@ -34,8 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use POSIX qw(mktime strftime);
-use Fcntl ':flock';
+use POSIX qw(mktime);
 use XML::DOM;
 use XML::DOM::XPath;
 use Image::ExifTool;
@@ -43,9 +42,15 @@ use Data::Dumper;
 
 require 'common.pl';
 
+if(!defined($ARGV[0])) {
+	die "Usage: $0 image.jpg";
+}
 my $file = $ARGV[0];
 my $fileSize = -s $file; 
 my $utcTime = 0;
+
+my $self = init();
+lockKml($self);
 
 my $exif = new Image::ExifTool;
 $exif->Options({PrintConv => 0});

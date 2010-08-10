@@ -5,14 +5,21 @@ use strict;
 use utf8;
 
 
+# InstaMapper Device API Key
 $settings->{apiKey} = "@@APIKEY@@";
 
+# Directory where photocatalog is installed.
 $settings->{cwd} = "@@CWD@@";
 
+# Backend for data storeage.  Only working type is 'file'.
+$settings->{backend} = "file";
+
+# Settings for database backend.
 $settings->{dataSource} = "DBI:Pg:dbname=photocatalog;host=localhost";
 $settings->{dbUser} = "user";
 $settings->{dbPass} = "S3cr3t!";
 
+# Location where photocatalog is hosted.
 $settings->{website} = "@@WEBSITE@@";
 
 1;
