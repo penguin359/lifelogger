@@ -21,7 +21,7 @@
     <Style id="icon">
      <IconStyle>
       <Icon>
-       <href>http://www.example.org/icons/trail.png</href>
+       <href>@@WEBSITE@@/icons/trail.png</href>
       </Icon>
       <hotSpot x="16" y="16" xunits="pixels" yunits="pixels"/>
      </IconStyle>
@@ -29,7 +29,7 @@
   <Style id="photo">
    <IconStyle>
     <Icon>
-     <href>http://www.example.org/icons/camera.png</href>
+     <href>@@WEBSITE@@/icons/camera.png</href>
     </Icon>
     <hotSpot x="32" y="17" xunits="pixels" yunits="pixels"/>
    </IconStyle>
@@ -37,7 +37,7 @@
   <Style id="text">
    <IconStyle>
     <Icon>
-     <href>http://www.example.org/icons/text.png</href>
+     <href>@@WEBSITE@@/icons/text.png</href>
     </Icon>
     <hotSpot x="32" y="32" xunits="pixels" yunits="pixels"/>
    </IconStyle>
@@ -45,7 +45,7 @@
   <Style id="twitter">
    <IconStyle>
     <Icon>
-     <href>http://www.example.org/icons/twitter.png</href>
+     <href>@@WEBSITE@@/icons/twitter.png</href>
     </Icon>
     <hotSpot x="32" y="32" xunits="pixels" yunits="pixels"/>
    </IconStyle>
@@ -53,7 +53,7 @@
   <Style id="position">
    <IconStyle>
     <Icon>
-     <href>http://www.example.org/icons/me.jpg</href>
+     <href>@@WEBSITE@@/icons/me.jpg</href>
     </Icon>
     <hotSpot x="32" y="30" xunits="pixels" yunits="pixels"/>
    </IconStyle>
