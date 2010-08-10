@@ -39,11 +39,7 @@ use Fcntl ':flock';
 use XML::DOM;
 use XML::DOM::XPath;
 use Image::ExifTool;
-use Encode;
 use Data::Dumper;
-
-my $kmlFile = "live.kml";
-#my $kmlFile = "test.kml";
 
 require 'common.pl';
 

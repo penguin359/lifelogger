@@ -34,12 +34,10 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use POSIX qw(mktime strftime);
-use Fcntl ':flock';
+use POSIX qw(mktime);
 use XML::DOM;
 use XML::DOM::XPath;
 use Image::ExifTool;
-use Encode;
 use Data::Dumper;
 
 require 'common.pl';

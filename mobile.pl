@@ -34,7 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use Fcntl ':flock';
 use XML::DOM;
 use XML::DOM::XPath;
 use Data::Dumper;

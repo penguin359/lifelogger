@@ -35,7 +35,6 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use POSIX qw(strftime);
-use Fcntl ':flock';
 use XML::DOM;
 use XML::DOM::XPath;
 use HTTP::Request;

@@ -34,9 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use vars qw($apiKey $cwd);
-use POSIX qw(strftime);
-use Fcntl ':flock';
 
 require 'common.pl';
 

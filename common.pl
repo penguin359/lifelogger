@@ -34,7 +34,6 @@ use utf8;
 use open ':utf8', ':std';
 use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl ':flock';
-use Encode;
 use XML::RSS;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
