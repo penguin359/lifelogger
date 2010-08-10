@@ -67,27 +67,23 @@ $lastTimestamp++;
 #print Dumper($entries);
 #print "TS: '$lastTimestamp'\n";
 
-#my $request = HTTP::Request->new(GET => "http://www.instamapper.com.ipv6.sixxs.org/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp");
-#my $ua = LWP::UserAgent->new;
-#my $response = $ua->request($request);
+my $request = HTTP::Request->new(GET => "http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp");
+my $ua = LWP::UserAgent->new;
+my $response = $ua->request($request);
 my $newEntries = [];
-#if($response->is_success) {
-#	#print "R: '" . $response->decoded_content . "'\n";
-#	@lines = split /\n/, $response->decoded_content;
-#	($newEntries) = parseData(\@lines);
-#	#print Dumper($newEntries);
-#} else {
-#	print STDERR $response->status_line, "\n";
-#}
-#print "wget -O - 'http://www.instamapper.com.ipv6.sixxs.org/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp'\n";
-#exit 0;
-#open(my $wgetFd, "wget -q -O - 'http://www.instamapper.com.ipv6.sixxs.org/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp'|") or die "failed to retrieve InstaMapper data";
-#print "wget -q -O - 'http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp'\n";
-open(my $wgetFd, "wget -q -O - 'http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp'|") or die "failed to retrieve InstaMapper data";
-my @lines = <$wgetFd>;
-close $wgetFd;
+if($response->is_success) {
+	#print "R: '" . $response->decoded_content . "'\n";
+	my @lines = split /\n/, $response->decoded_content;
+	($newEntries) = parseData($self, \@lines);
+	#print Dumper($newEntries);
+} else {
+	print STDERR $response->status_line, "\n";
+}
+#open(my $wgetFd, "wget -q -O - \"http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp\"|") or die "failed to retrieve InstaMapper data";
+#my @lines = <$wgetFd>;
+#close $wgetFd;
 #print Dumper(\@lines);
-($newEntries) = parseData($self, \@lines);
+#($newEntries) = parseData($self, \@lines);
 
 my $doc = loadKml($self);
 my @locationBase = $doc->findnodes("/kml/Document/Folder[name='Locations']");

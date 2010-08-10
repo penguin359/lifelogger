@@ -35,4 +35,14 @@ Other types of GPS sources
 Windows Support
 Lock without needing KML file
 More fine-grained locking
+Eliminate usage of system() and open("|")
 and much more...
+
+Windows Issues:
+  Need wget
+  Easily installing dependencies
+    XML::RSS and XML::Atom are particularly problematic
+  Pathnames use backslash
+  Cron replacement
+  Email replacement
+  system() and open("|") use Command Interpreter instead of shell.

@@ -95,6 +95,9 @@ my $apiKey = ask("InstaMapper API Key", "584014439054448247");
 my $cwd = getcwd;
 print "\n";
 
+# Support for Windows users
+$cwd =~ s:\\:\\\\:g;
+
 sub installFile {
 	my ($file) = @_;
 
