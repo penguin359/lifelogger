@@ -34,7 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use Data::Dumper;
 
 require 'common.pl';
 

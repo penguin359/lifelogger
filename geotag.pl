@@ -34,7 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use POSIX qw(mktime);
+use Time::Local;
 use XML::DOM;
 use XML::DOM::XPath;
 use Image::ExifTool;
@@ -68,7 +68,7 @@ if(exists $info->{DateTimeOriginal}) {
 	my $tzoffset = (-7*60 + 0)*60;
 	$tzoffset *= -1;
 	#print "SD: $mday $mon $year  $hour:$min:$sec\n";
-	$timestamp = mktime($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
+	$timestamp = timegm($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
 
 #Goal below is to set GPSTimeStamp to UTC time on line 112;
 	$utcTime = $hour = $tzoffset.":".$min.":".$sec;

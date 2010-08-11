@@ -33,9 +33,11 @@ Generic RSS support
 Multiple GPS sources
 Other types of GPS sources
 Windows Support
+  Cygwin and ActivePerl
 Lock without needing KML file
 More fine-grained locking
 Eliminate usage of system() and open("|")
+Develop test suite.
 and much more...
 
 Windows Issues:
@@ -46,3 +48,7 @@ Windows Issues:
   Cron replacement
   Email replacement
   system() and open("|") use Command Interpreter instead of shell.
+
+
+  Currently updatelocation.pl runs under cygwin, but it fails with a
+  read error in Expat.pm in ActivePerl.  Nothing else tested.

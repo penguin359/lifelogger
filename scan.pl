@@ -34,7 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use POSIX qw(mktime);
+use Time::Local;
 use XML::DOM;
 use XML::DOM::XPath;
 use Image::ExifTool;
@@ -78,7 +78,7 @@ sub addImage {
 		my $tzoffset = (-7*60 + 0)*60;
 		$tzoffset *= -1;
 		#print "SD: $mday $mon $year  $hour:$min:$sec\n";
-		$timestamp = mktime($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
+		$timestamp = timegm($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
 	}
 	my $latitude;
 	my $longitude;
@@ -101,8 +101,8 @@ sub addImage {
 	my $mark = createPlacemark($doc);
 	addName($doc, $mark, $filename);
 	addDescription($doc, $mark, "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addRssEntry($self->{rssFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addAtomEntry($self->{atomFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+	addRssEntry($self, $self->{rssFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+	addAtomEntry($self, $self->{atomFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, 'photo');
 	addPoint($doc, $mark, $latitude, $longitude);
@@ -116,11 +116,11 @@ my @base = $doc->findnodes("/kml/Document/Folder[name='Unsorted Photos']");
 die "Can't find base for unsorted photos" if @base != 1;
 
 
-$self->{rssFeed} = loadRssFeed();
-$self->{atomFeed} = loadAtomFeed();
+$self->{rssFeed} = loadRssFeed($self);
+$self->{atomFeed} = loadAtomFeed($self);
 foreach(@ARGV) {
 	addImage($_, $self, $doc, $base[0]);
 }
 saveKml($self, $doc);
-saveRssFeed($self->{rssFeed});
-saveAtomFeed($self->{atomFeed});
+saveRssFeed($self, $self->{rssFeed});
+saveAtomFeed($self, $self->{atomFeed});

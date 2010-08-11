@@ -34,7 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use POSIX qw(mktime strftime);
+use Time::Local;
 use XML::DOM;
 use XML::DOM::XPath;
 use MIME::Parser;
@@ -90,7 +90,7 @@ sub scanEntity {
 			my $tzoffset = (-7*60 + 0)*60;
 			$tzoffset *= -1;
 			#print "SD: $mday $mon $year  $hour:$min:$sec\n";
-			$timestamp = mktime($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
+			$timestamp = timegm($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
 		}
 		my $latitude;
 		my $longitude;
@@ -113,8 +113,8 @@ sub scanEntity {
 		my $mark = createPlacemark($doc);
 		addName($doc, $mark, $self->{subject});
 		addDescription($doc, $mark, "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-		addRssEntry($self->{rssFeed}, $self->{subject}, "$website/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-		addAtomEntry($self->{atomFeed}, $self->{subject}, "$website/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+		addRssEntry($self, $self->{rssFeed}, $self->{subject}, "$website/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+		addAtomEntry($self, $self->{atomFeed}, $self->{subject}, "$website/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
 		addTimestamp($doc, $mark, $timestamp);
 		addStyle($doc, $mark, 'photo');
 		addPoint($doc, $mark, $latitude, $longitude);
@@ -179,8 +179,8 @@ chomp($subject);
 $self->{subject} = $subject;
 
 
-$self->{rssFeed} = loadRssFeed();
-$self->{atomFeed} = loadAtomFeed();
+$self->{rssFeed} = loadRssFeed($self);
+$self->{atomFeed} = loadAtomFeed($self);
 $self->{date} = parseDate($entity->head->get('Date'));
 $self->{matched} = 0;
 #exit 0;
@@ -195,9 +195,9 @@ if(!$self->{matched}) {
 	addPlacemark($doc, $messageBase[0], $mark);
 	my $uuid = `uuidgen`;
 	chomp($uuid);
-	addRssEntry($self->{rssFeed}, $self->{subject}, "urn:uuid:$uuid", "<p><b>$self->{subject}</b></p><p>$descrText</p>");
-	addAtomEntry($self->{atomFeed}, $self->{subject}, "urn:uuid:$uuid", "<p><b>$self->{subject}</b></p><p>$descrText</p>");
+	addRssEntry($self, $self->{rssFeed}, $self->{subject}, "urn:uuid:$uuid", "<p><b>$self->{subject}</b></p><p>$descrText</p>");
+	addAtomEntry($self, $self->{atomFeed}, $self->{subject}, "urn:uuid:$uuid", "<p><b>$self->{subject}</b></p><p>$descrText</p>");
 }
 saveKml($self, $doc);
-saveRssFeed($self->{rssFeed});
-saveAtomFeed($self->{atomFeed});
+saveRssFeed($self, $self->{rssFeed});
+saveAtomFeed($self, $self->{atomFeed});

@@ -34,13 +34,9 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use POSIX qw(mktime strftime);
 use XML::DOM;
 use XML::DOM::XPath;
-use MIME::Parser;
-use MIME::WordDecoder;
 use Image::ExifTool;
-use Data::Dumper;
 
 my $rssFile = "twitter.rss";
 $rssFile = shift if @ARGV;

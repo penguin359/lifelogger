@@ -34,10 +34,15 @@ use utf8;
 use open ':utf8', ':std';
 use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl ':flock';
+use POSIX qw(strftime);
+use Time::Local;
 use XML::RSS;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
 use DBI;
+
+$XML::Atom::DefaultVersion = "1.0";
+$XML::Atom::ForceUnicode = 1;
 
 # Load default settings
 $settings = {};
@@ -60,12 +65,10 @@ $settings->{dbPass} = $dbPass if defined($dbPass);
 
 require "backends/$settings->{backend}.pl";
 
-my $kmlFile = "$settings->{cwd}/live.kml";
-my $rssFile = "$settings->{cwd}/live.rss";
-my $atomFile = "$settings->{cwd}/live.atom";
-
-$XML::Atom::DefaultVersion = "1.0";
-$XML::Atom::ForceUnicode = 1;
+my $files = {};
+$files->{kml} = "$settings->{cwd}/live.kml";
+$files->{rss} = "$settings->{cwd}/live.rss";
+$files->{atom} = "$settings->{cwd}/live.atom";
 
 sub createPlacemark {
 	my($doc) = @_;
@@ -185,7 +188,7 @@ sub parseDate {
 	my $tzoffset = ($tzhour*60 + $tzmin)*60;
 	$tzoffset *= -1 if $tzdir ne '-';
 	#print "PD: $day,  $mday $mon $year  $hour:$min:$sec  $tzdir$tzhour:$tzmin\n";
-	return mktime($sec, $min, $hour, $mday, $mon, $year-1900) + $tzoffset;
+	return timegm($sec, $min, $hour, $mday, $mon, $year-1900) + $tzoffset;
 }
 
 sub escapeText {
@@ -200,33 +203,37 @@ sub escapeText {
 }
 
 sub loadRssFeed {
+	my($self) = @_;
+
 	my $rssFeed = new XML::RSS version => '2.0', encode_cb => \&escapeText;
-	$rssFeed->parsefile($rssFile);
+	$rssFeed->parsefile($self->{files}->{rss});
 	return $rssFeed;
 }
 
 sub loadAtomFeed {
-	return new XML::Atom::Feed $atomFile;
+	my($self) = @_;
+
+	return new XML::Atom::Feed $self->{files}->{atom};
 }
 
 sub saveRssFeed {
-	my($feed) = @_;
+	my($self, $feed) = @_;
 
-	$feed->save($rssFile);
+	$feed->save($self->{files}->{rss});
 }
 
 sub saveAtomFeed {
-	my($feed) = @_;
+	my($self, $feed) = @_;
 
 	my $data = $feed->as_xml;
 	utf8::decode($data);
-	open(my $fd, ">$atomFile") or print STDERR "Can't update atom file\n";
+	open(my $fd, ">$self->{files}->{atom}") or print STDERR "Can't update atom file\n";
 	print $fd $data;
 	close $fd;
 }
 
 sub addRssEntry {
-	my($feed, $title, $id, $content) = @_;
+	my($self, $feed, $title, $id, $content) = @_;
 
 	$feed->add_item(title      => $title,
 		       guid        => $id,
@@ -234,7 +241,7 @@ sub addRssEntry {
 }
 
 sub addAtomEntry {
-	my($feed, $title, $id, $content) = @_;
+	my($self, $feed, $title, $id, $content) = @_;
 
 	my $entry = new XML::Atom::Entry;
 	$entry->title($title);
@@ -247,8 +254,7 @@ sub loadKml {
 	my($self) = @_;
 
 	my $parser = new XML::DOM::Parser;
-	my $doc = $parser->parsefile($kmlFile);
-	#my $doc = $parser->parsefile("test.kml");
+	my $doc = $parser->parsefile($self->{files}->{kml});
 
 	return $doc;
 }
@@ -257,16 +263,16 @@ sub saveKml {
 	my($self, $doc) = @_;
 
 	#print $doc->toString;
-	open(my $fd, ">$kmlFile") or die "Failed to open KML for writing";
+	open(my $fd, ">$self->{files}->{kml}") or die "Failed to open KML for writing";
 	$doc->printToFileHandle($fd);
-	#$doc->printToFile($kmlFile);
+	#$doc->printToFile($self->{files}->{kml});
 }
 
 sub lockKml {
 	my($self) = @_;
 
 	return if exists($self->{lockFd});
-	open(my $fd, $kmlFile) or die "Can't open kml file for locking";
+	open(my $fd, $self->{files}->{kml}) or die "Can't open kml file for locking";
 	flock($fd, LOCK_EX) or die "Can't establish file lock";
 	$self->{lockFd} = $fd;
 }
@@ -289,6 +295,7 @@ sub init {
 	my $self = {};
 
 	$self->{settings} = $settings;
+	$self->{files} = $files;
 
 	chdir $settings->{cwd};
 	umask 0022;
