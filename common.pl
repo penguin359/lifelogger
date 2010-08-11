@@ -192,13 +192,13 @@ sub parseDate {
 }
 
 sub escapeText {
-	my($a, $text) = @_;
+	my($self, $text) = @_;
 
 	$text =~ s/&/&amp;/g;
 	$text =~ s/</&lt;/g;
 	$text =~ s/>/&gt;/g;
 	$text =~ s/"/&quot;/g;
-	$text =~ s/'/&apos;/g;
+	$text =~ s/'/&#39;/g;
 	$text;
 }
 

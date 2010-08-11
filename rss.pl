@@ -34,6 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use Encode;
 use XML::DOM;
 use XML::DOM::XPath;
 use Image::ExifTool;
@@ -56,11 +57,11 @@ die "Can't find base for twitter" if @base != 1;
 
 #print "List:\n";
 foreach my $item (@items) {
-	my $title = ${$item->findnodes('title/text()')}[0]->getNodeValue();
-	my $descr = ${$item->findnodes('description/text()')}[0]->getNodeValue();
-	my $pubDate = ${$item->findnodes('pubDate/text()')}[0]->getNodeValue();
-	my $guid = ${$item->findnodes('guid/text()')}[0]->getNodeValue();
-	my $link = ${$item->findnodes('link/text()')}[0]->getNodeValue();
+	my $title     = ${$item->findnodes('title/text()')}[0]->getNodeValue();
+	my $descr     = ${$item->findnodes('description/text()')}[0]->getNodeValue();
+	my $pubDate   = ${$item->findnodes('pubDate/text()')}[0]->getNodeValue();
+	my $guid      = ${$item->findnodes('guid/text()')}[0]->getNodeValue();
+	my $link      = ${$item->findnodes('link/text()')}[0]->getNodeValue();
 	my $timestamp = parseDate($pubDate);
 
 	my @guidMatches = $doc->findnodes("/kml/Document/Folder/Placemark/ExtendedData/Data[\@name='guid']/value[text()='$guid']/text()");
@@ -70,21 +71,14 @@ foreach my $item (@items) {
 		#print "Matching GUID: '$kmlGuid'\n";
 		next;
 	}
+	#print "[UTF8] " if utf8::is_utf8($descr);
+	#print "[VALID] " if utf8::valid($descr);
 	#print "I: '", $descr, "' - $link - $timestamp\n";
 	#next;
 
-	$descr =~ s/&/&amp;/g;
-	$descr =~ s/"/&quot;/g;
-	$descr =~ s/</&lt;/g;
-	$descr =~ s/>/&gt;/g;
-	$guid =~ s/&/&amp;/g;
-	$guid =~ s/"/&quot;/g;
-	$guid =~ s/</&lt;/g;
-	$guid =~ s/>/&gt;/g;
-	$link =~ s/&/&amp;/g;
-	$link =~ s/"/&quot;/g;
-	$link =~ s/</&lt;/g;
-	$link =~ s/>/&gt;/g;
+	$descr = escapeText($self, $descr);
+	$guid  = escapeText($self, $guid);
+	$link  = escapeText($self, $link);
 
 	my $mark = createPlacemark($doc);
 	my $entry = closestEntry($self, $timestamp);

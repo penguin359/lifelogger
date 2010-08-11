@@ -74,6 +74,15 @@ foreach my $lib (
 	eval "require $lib"; print STDERR "Need to install $lib\n" if $@;
 }
 
+eval {
+	require XML::DOM;
+	$XML::DOM::VERSION =~ /^(\d+)\.(\d+)$/;
+	if($1 < 1 || $1 == 1 && $2 < 44) {
+		print "XML-DOM-$XML::DOM::VERSION is older than 1.44.\n";
+		print "Please upgrade as older versions do not handle UTF-8 well.\n";
+	}
+};
+
 print "\n";
 print <<EOF;
 Most of the functionality of these scripts currently requires an
