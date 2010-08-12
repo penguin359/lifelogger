@@ -5,6 +5,7 @@
 ^live.atom$
 ^live.kml$
 ^live.rss$
+^lock$
 ^mobile.kml$
 ^location.csv$
 ^overlay.kml$
