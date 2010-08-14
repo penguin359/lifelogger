@@ -66,6 +66,7 @@ $settings->{dbPass} = $dbPass if defined($dbPass);
 require "backends/$settings->{backend}.pl";
 
 my $files = {};
+$files->{lock} = "$settings->{cwd}/lock";
 $files->{kml} = "$settings->{cwd}/live.kml";
 $files->{rss} = "$settings->{cwd}/live.rss";
 $files->{atom} = "$settings->{cwd}/live.atom";
@@ -272,7 +273,7 @@ sub lockKml {
 	my($self) = @_;
 
 	return if exists($self->{lockFd});
-	open(my $fd, $self->{files}->{kml}) or die "Can't open kml file for locking";
+	open(my $fd, '>>', $self->{files}->{lock}) or die "Can't open lock file";
 	flock($fd, LOCK_EX) or die "Can't establish file lock";
 	$self->{lockFd} = $fd;
 }
