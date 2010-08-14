@@ -89,6 +89,19 @@ sub lastTimestamp {
 	return $self->{lastTimestamp};
 }
 
+sub writeDataFile {
+	my($self, $entries, $file) = @_;
+
+	my $str = "InstaMapper API v1.00\n";
+	foreach my $entry (@$entries) {
+		$str .= "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
+	}
+
+	open(my $fd, ">$file") or die "Can't Write InstaMapper updates";
+	print $fd $str;
+	close $fd;
+}
+
 sub writeData {
 	my($self, $entries) = @_;
 

@@ -38,6 +38,7 @@ Lock without needing KML file
 More fine-grained locking
 Eliminate usage of system() and open("|")
 Develop test suite.
+Better testing of Unicode/UTF-8.
 and much more...
 
 Windows Issues:

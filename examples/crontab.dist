@@ -15,7 +15,7 @@ PERL5LIB=@@CWD@@
 */10 * * * * mobile.pl
 
 # This pulls in Twitter (or any other RSS feed) and adds it to live.kml
-*/10 * * * * wget -q -O /tmp/twitter.rss http://twitter.com/statuses/user_timeline/783214.rss && rss.pl /tmp/twitter.rss; rm /tmp/twitter.rss
+*/10 * * * * rss.pl http://twitter.com/statuses/user_timeline/783214.rss
 
 # This scans the uploads folder for JPEG images and adds them to live.kml.
 */15 * * * * cd @@CWD@@ && scan.pl uploads/*.[jJ][pP][gG]

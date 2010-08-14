@@ -47,10 +47,12 @@ my $makeMark = 1;
 if(defined($ARGV[0])) {
 	if($ARGV[0] eq "-s") {
 		$slow = 1;
+		shift;
 	} elsif($ARGV[0] eq "-n") {
 		$makeMark = 0;
-	} else {
-		die "Usage: $0 [-n | -s]";
+		shift;
+	} elsif($ARGV[0] =~ /^-/) {
+		die "Usage: $0 [-n | -s] [file.csv]";
 	}
 }
 
@@ -67,18 +69,25 @@ $lastTimestamp++;
 #print Dumper($entries);
 #print "TS: '$lastTimestamp'\n";
 
-my $request = HTTP::Request->new(GET => "http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp");
-my $ua = LWP::UserAgent->new;
-my $response = $ua->request($request);
 my $newEntries = [];
-if($response->is_success) {
-	#print "R: '" . $response->decoded_content . "'\n";
-	my @lines = split /\n/, $response->decoded_content;
+if(defined($ARGV[0])) {
+	open(my $fd, $ARGV[0]) or die "Can't load file";
+	my @lines = <$fd>;
 	($newEntries) = parseData($self, \@lines);
-	#print Dumper($newEntries);
 } else {
-	print STDERR $response->status_line, "\n";
+	my $request = HTTP::Request->new(GET => "http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp");
+	my $ua = LWP::UserAgent->new;
+	my $response = $ua->request($request);
+	if($response->is_success) {
+		#print "R: '" . $response->decoded_content . "'\n";
+		my @lines = split /\n/, $response->decoded_content;
+		($newEntries) = parseData($self, \@lines);
+	} else {
+		print STDERR $response->status_line, "\n";
+	}
 }
+#print Dumper($newEntries);
+
 #open(my $wgetFd, "wget -q -O - \"http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp\"|") or die "failed to retrieve InstaMapper data";
 #my @lines = <$wgetFd>;
 #close $wgetFd;
