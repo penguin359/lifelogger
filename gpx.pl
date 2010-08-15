@@ -38,6 +38,8 @@ use Getopt::Long;
 use XML::DOM;
 use XML::DOM::XPath;
 
+require 'common.pl';
+
 my $name = "GPX Data";
 my $source = 0;
 my $verbose = 0;
@@ -49,8 +51,6 @@ my $result = GetOptions("name=s" => \$name,
 
 my $rssFile = "log.gpx";
 $rssFile = shift if @ARGV;
-
-require 'common.pl';
 
 my $self = init();
 lockKml($self);

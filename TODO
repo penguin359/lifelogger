@@ -38,7 +38,13 @@ More fine-grained locking
 Eliminate usage of system() and open("|")
 Develop test suite.
 Better testing of Unicode/UTF-8.
+Properly support :locale instead of forcing utf8.
 Expand on TIPS and time zone issues
+Support POST for InstaMapper
+Save files in a safer manner
+  Save to .bak
+  unlink original
+  rename
 and much more...
 
 Windows Issues:

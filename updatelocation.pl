@@ -34,7 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use POSIX qw(strftime);
+use Getopt::Long;
 use XML::DOM;
 use XML::DOM::XPath;
 use HTTP::Request;
@@ -43,18 +43,11 @@ use Data::Dumper;
 require 'common.pl';
 
 my $slow = 0;
-my $makeMark = 1;
-if(defined($ARGV[0])) {
-	if($ARGV[0] eq "-s") {
-		$slow = 1;
-		shift;
-	} elsif($ARGV[0] eq "-n") {
-		$makeMark = 0;
-		shift;
-	} elsif($ARGV[0] =~ /^-/) {
-		die "Usage: $0 [-n | -s] [file.csv]";
-	}
-}
+my $noMark = 0;
+my $result = GetOptions(
+	"slow" => \$slow,
+	"no-mark" => \$noMark);
+die "Usage: $0 [-n | -s] [file.csv]" if !$result || @ARGV > 1;
 
 my $self = init();
 lockKml($self);
@@ -64,10 +57,6 @@ my $apiKey = $self->{settings}->{apiKey};
 my $entries = loadData($self);
 my $lastTimestamp = lastTimestamp($self);
 $lastTimestamp++;
-#print strftime("%FT%TZ", gmtime($lastTimestamp)), "\n";
-
-#print Dumper($entries);
-#print "TS: '$lastTimestamp'\n";
 
 my $newEntries = [];
 if(defined($ARGV[0])) {
@@ -79,83 +68,33 @@ if(defined($ARGV[0])) {
 	my $ua = LWP::UserAgent->new;
 	my $response = $ua->request($request);
 	if($response->is_success) {
-		#print "R: '" . $response->decoded_content . "'\n";
 		my @lines = split /\n/, $response->decoded_content;
 		($newEntries) = parseData($self, \@lines);
 	} else {
 		print STDERR $response->status_line, "\n";
 	}
 }
-#print Dumper($newEntries);
-
-#open(my $wgetFd, "wget -q -O - \"http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp\"|") or die "failed to retrieve InstaMapper data";
-#my @lines = <$wgetFd>;
-#close $wgetFd;
-#print Dumper(\@lines);
-#($newEntries) = parseData($self, \@lines);
 
 my $doc = loadKml($self);
 my @locationBase = $doc->findnodes("/kml/Document/Folder[name='Locations']");
 
 die "Can't find base for location" if @locationBase != 1;
 
-#push @$entries, @$newEntries;
 appendData($self, $newEntries);
-#print Dumper($newEntries);
-#exit 0;
-#unlink($dataFile);
-#rename("$dataFile.bak", $dataFile);
-
-#print <<EOF;
-#<kml xmlns="http://www.opengis.net/kml/2.2"
-# xmlns:gx="http://www.google.com/kml/ext/2.2">'
-#EOF
-#
-#print <<EOF;
-#</kml>
-#EOF
 
 my $kmlEntries = [];
-push @$kmlEntries, pop @$newEntries if @$newEntries && $makeMark;
+push @$kmlEntries, pop @$newEntries if @$newEntries && !$noMark;
 push @$newEntries, @$kmlEntries;
 foreach my $entry (@$kmlEntries) {
 	next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
-	my $mark = $doc->createElement('Placemark');
-	my $timestamp = $doc->createElement('TimeStamp');
-	my $when = $doc->createElement('when');
-	my $text = $doc->createTextNode(strftime("%FT%TZ", gmtime($entry->{timestamp})));
-	$when->appendChild($text);
-	$timestamp->appendChild($when);
-	$mark->appendChild($timestamp);
-	my $style = $doc->createElement('styleUrl');
-	$text = $doc->createTextNode('#icon');
-	$style->appendChild($text);
-	$mark->appendChild($style);
-	my $point = $doc->createElement('Point');
-	my $coord = $doc->createElement('coordinates');
-	$text = $doc->createTextNode("$entry->{longitude},$entry->{latitude},$entry->{altitude}");
-	$coord->appendChild($text);
-	$point->appendChild($coord);
-	$mark->appendChild($point);
-	my $extData = $doc->createElement('ExtendedData');
-	my $data = $doc->createElement('Data');
-	$data->setAttribute('name', 'speed');
-	my $value = $doc->createElement('value');
-	$text = $doc->createTextNode($entry->{speed} . " m/s");
-	$value->appendChild($text);
-	$data->appendChild($value);
-	$extData->appendChild($data);
-	$data = $doc->createElement('Data');
-	$data->setAttribute('name', 'heading');
-	$value = $doc->createElement('value');
-	$text = $doc->createTextNode($entry->{heading});
-	$value->appendChild($text);
-	$data->appendChild($value);
-	$extData->appendChild($data);
-	$mark->appendChild($extData);
-	$locationBase[0]->appendChild($mark);
-	$text = $doc->createTextNode("\n");
-	$locationBase[0]->appendChild($text);
+	my $mark = createPlacemark($doc);
+	addTimestamp($doc, $mark, $entry->{timestamp});
+	addStyle($doc, $mark, 'icon');
+	addPoint($doc, $mark, $entry->{longitude}, $entry->{latitude}, $entry->{altitude});
+	addExtendedData($doc, $mark, {
+	    speed => $entry->{speed} . " m/s",
+	    heading => $entry->{heading}});
+	addPlacemark($doc, $locationBase[0], $mark);
 }
 
 my $coordStr = "";
@@ -164,8 +103,6 @@ foreach my $entry (@$newEntries) {
 	$coordStr .= "\n$entry->{longitude},$entry->{latitude},$entry->{altitude}";
 }
 my @lineNode = $doc->findnodes('/kml/Document/Placemark/LineString/coordinates');
-#print "XML:\n";
-#print Dumper(\@lineNode);
 $lineNode[0]->addText($coordStr);
 
 my $currentPosition = pop @$newEntries;
