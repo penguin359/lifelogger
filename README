@@ -14,6 +14,9 @@ install.pl - Installer.  See INSTALL for usage.
 updatelocation.pl - This is the most important script as it pulls
 location data from InstaMapper and updates the path in the KML file.
 
+gpx.pl - This reads a GPX file and converts it into an InstaMapper
+compatible CSV file which can be read by updatelocation.pl.
+
 lock-kml.pl - Locks the KML file for 10 minutes.  Useful when hand
 editing the KML file to prevent cron jobs from interfering.
 
@@ -30,3 +33,19 @@ mobile.pl - This creates a mobile version of the KML file.
 timediff.pl - Scans CSV file for large gaps in updates and reports them.
 
 geotag.pl - (Not ready yet.)
+
+
+
+TIPS
+
+Time zones can be a tricky business, especially when traveling between
+them.  When using this software to geotag photos later, it's important
+to have the right timestamps on them so they can be located using your
+GPS data.  This software attempts to use UTC time when available and
+local time otherwise.  Most cameras store a timestamp in the photos they
+take, however, there is no time zone information in that information and
+it will be assumed that it is the local time zone.  The FAT filesystem
+that cameras often use to store photos also store a modification date
+that can be used, but again, it is in local time.  Email, on the other
+hand, does store a time zone offset in it's date which this software can
+convert to UTC correctly.

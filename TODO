@@ -33,23 +33,19 @@ Generic RSS support
 Multiple GPS sources
 Other types of GPS sources
 Windows Support
-  Cygwin and ActivePerl
-Lock without needing KML file
+  Strawberry Perl, ActivePerl, and Cygwin
 More fine-grained locking
 Eliminate usage of system() and open("|")
 Develop test suite.
 Better testing of Unicode/UTF-8.
+Expand on TIPS and time zone issues
 and much more...
 
 Windows Issues:
-  Need wget
+  Need wget (Fixed)
   Easily installing dependencies
     XML::RSS and XML::Atom are particularly problematic
-  Pathnames use backslash
-  Cron replacement
+  Pathnames use backslash (Fixed?)
+  Cron replacement (Windows Task Scheduler?)
   Email replacement
   system() and open("|") use Command Interpreter instead of shell.
-
-
-  Currently updatelocation.pl runs under cygwin, but it fails with a
-  read error in Expat.pm in ActivePerl.  Nothing else tested.

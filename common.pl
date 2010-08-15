@@ -171,25 +171,25 @@ sub parseDate {
 	my $tzmin = $10;
 	$sec = 0 if !defined($sec);
 	my %monStrToNum = (
-		Jan =>  0,
-		Feb =>  1,
-		Mar =>  2,
-		Apr =>  3,
-		May =>  4,
-		Jun =>  5,
-		Jul =>  6,
-		Aug =>  7,
-		Sep =>  8,
-		Oct =>  9,
-		Nov => 10,
-		Dec => 11
+		Jan =>  1,
+		Feb =>  2,
+		Mar =>  3,
+		Apr =>  4,
+		May =>  5,
+		Jun =>  6,
+		Jul =>  7,
+		Aug =>  8,
+		Sep =>  9,
+		Oct => 10,
+		Nov => 11,
+		Dec => 12
 	);
 	my $mon = $monStrToNum{$monStr};
-	$mon = 0 if !defined $mon;
+	$mon = 1 if !defined $mon;
 	my $tzoffset = ($tzhour*60 + $tzmin)*60;
-	$tzoffset *= -1 if $tzdir ne '-';
+	$tzoffset *= -1 if $tzdir eq '-';
 	#print "PD: $day,  $mday $mon $year  $hour:$min:$sec  $tzdir$tzhour:$tzmin\n";
-	return timegm($sec, $min, $hour, $mday, $mon, $year-1900) + $tzoffset;
+	return timegm($sec, $min, $hour, $mday, $mon-1, $year) - $tzoffset;
 }
 
 sub escapeText {
@@ -302,6 +302,53 @@ sub init {
 	umask 0022;
 
 	return $self;
+}
+
+sub parseIsoTime {
+	my($self, $time) = @_;
+
+	# Subset of ISO 8601
+	# YYYY-MM-DDTHH:MM:SS
+	# Optional timezone suffix of Z or +HH:MM
+	# Seconds, and symbols : and - are optional
+	# Minutes in timezone are optional
+	# Whitespace around timestamp is allowed
+	if($time !~ /^\s*(\d\d\d\d)-?(\d\d)-?(\d\d)T(\d\d):?(\d\d)(?::?(\d\d))?(Z|([+-])(\d\d)(?::?(\d\d))?)?\s*$/) {
+		warn "Can't parse ISO 8601 timestamp";
+		return 0;
+	}
+	my $year = $1;
+	my $mon = $2;
+	my $mday = $3;
+	my $hour = $4;
+	my $min = $5;
+	my $sec = $6;
+	$sec = 0 if !defined($sec);
+	if($mon < 1 || $mon > 12 ||
+	   $mday < 1 || $mday > 31 ||
+	   $hour < 0 || $hour > 24 ||
+	   $min < 0 || $min > 59 ||
+	   $sec < 0 || $sec > 60) {
+		warn "Invalid ISO 8601 timestamp";
+		return 0;
+	}
+	my $offset = $7;
+	if(defined($offset)) {
+		if($offset eq "Z") {
+			$offset = 0;
+		} else {
+			my $hourOffset = $9;
+			my $minOffset = $10;
+			#print "O: $1$hourOffset:$minOffset ";
+			$minOffset = 0 if !defined($minOffset);
+			$offset = ($hourOffset*60 + $minOffset)*60;
+			$offset *= -1 if $8 eq "-";
+		}
+		return timegm($sec, $min, $hour, $mday, $mon-1, $year) - $offset;
+	} else {
+		# No offset specified so use local time
+		return timelocal($sec, $min, $hour, $mday, $mon-1, $year);
+	}
 }
 
 1;

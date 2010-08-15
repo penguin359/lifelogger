@@ -9,6 +9,7 @@
 ^mobile.kml$
 ^location.csv$
 ^overlay.kml$
-^timestamp$
 ^settings.pl$
+^tags$
+^timestamp$
 ^uploads/

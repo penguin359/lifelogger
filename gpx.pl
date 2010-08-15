@@ -34,8 +34,18 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use Getopt::Long;
 use XML::DOM;
 use XML::DOM::XPath;
+
+my $name = "GPX Data";
+my $source = 0;
+my $verbose = 0;
+my $out = "gps-out.gpx";
+my $result = GetOptions("name=s" => \$name,
+	   "source=i" => \$source,
+	   "Verbose" => \$verbose,
+	   "out=s" => \$out);
 
 my $rssFile = "log.gpx";
 $rssFile = shift if @ARGV;
@@ -53,16 +63,16 @@ print "List:\n";
 my $entries = [];
 foreach my $item (@items) {
 	my $entry = {};
-	$entry->{key}       = 0;
-	$entry->{label}     = "GPX Data";
+	$entry->{key}       = $source;
+	$entry->{label}     = $name;
 	$entry->{latitude}  = ${$item->findnodes('@lat')}[0]->getNodeValue();
 	$entry->{longitude} = ${$item->findnodes('@lon')}[0]->getNodeValue();
 	$entry->{altitude}  = ${$item->findnodes('ele/text()')}[0]->getNodeValue();
 	$entry->{speed}     = ${$item->findnodes('extensions/speed/text()')}[0]->getNodeValue();
 	$entry->{heading}   = "";
 	my $time            = ${$item->findnodes('time/text()')}[0]->getNodeValue();
-	#$entry->{timestamp} = parseDate($pubDate);
-	$entry->{timestamp} = 0;
+	$entry->{timestamp} = parseIsoTime($self, $time);
+	#$entry->{timestamp} = 0;
 
 	#print "[UTF8] " if utf8::is_utf8($descr);
 	#print "[VALID] " if utf8::valid($descr);
@@ -70,4 +80,4 @@ foreach my $item (@items) {
 	push @$entries, $entry;
 }
 
-writeDataFile($self, $entries, "gpx-out.csv");
+writeDataFile($self, $entries, $out);
