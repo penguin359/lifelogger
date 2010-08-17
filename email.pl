@@ -33,7 +33,8 @@ use warnings;
 use strict;
 
 use utf8;
-use open ':utf8', ':std';
+use open ':utf8';
+use Getopt::Long;
 use Time::Local;
 use XML::DOM;
 use XML::DOM::XPath;
@@ -44,6 +45,9 @@ use Encode;
 use Data::Dumper;
 
 require 'common.pl';
+
+my $verbose = 0;
+my $result = GetOptions("Verbose" => \$verbose);
 
 my $descrText = "";
 
@@ -57,26 +61,27 @@ sub scanEntity {
 		scanEntity($entity->parts($i++), $self, $doc, $base);
 	}
 	if($entity->head->mime_type eq "image/jpeg") {
+		print "Found an image\n" if $self->{verbose};
 		$self->{matched} = 1;
 		my $exif = new Image::ExifTool;
 		#print $entity->body->as_string;
 		$entity->bodyhandle->binmode(1);
 		my $fd = $entity->bodyhandle->open('r');
 		my $info = $exif->ImageInfo($fd);
+		close $fd;
 		#print "CD: '", $entity->head->get('Content-Disposition', 0), "'\n";
 		my $filename = $entity->head->mime_attr('Content-Disposition.filename');
 		$filename = $entity->head->mime_attr('Content-Type.name') if !defined($filename);
-		$filename =~ s:/:_:;
+		$filename =~ s:[/\\]:_:g;
 		#print Dumper($info);
 		$fd = $entity->bodyhandle->open('r');
-		open(my $outFd, ">images/$filename");
+		open(my $outFd, '>:bytes', "images/$filename");
 		binmode $outFd;
 		while(<$fd>) {
 			print $outFd $_;
 		}
 		close $outFd;
-		system('convert','-geometry','160x160',"images/$filename","images/160/$filename");
-		system('convert','-geometry','32x32',"images/$filename","images/32/$filename");
+		createThumbnails($self, "images/$filename");
 
 		my $timestamp = $self->{date};
 		if(exists $info->{DateTimeOriginal}) {
@@ -120,6 +125,7 @@ sub scanEntity {
 		addPoint($doc, $mark, $latitude, $longitude);
 		addPlacemark($doc, $base, $mark);
 	} elsif($entity->head->mime_type eq "text/plain") {
+		print "Found text\n" if $self->{verbose};
 		#$entity->bodyhandle->print(\*STDOUT);
 		#print $entity->bodyhandle->as_string;
 		$descrText = $entity->bodyhandle->as_string;
@@ -128,11 +134,12 @@ sub scanEntity {
 		$descrText = decode($entity->head->mime_attr('Content-type.charset'), $descrText);
 		$descrText = escapeText($self, $descrText);
 	} elsif($entity->head->get('Content-Disposition', 0) =~ /^\s*attachment\s*(?:;.*)?$/) {
+		print "Found other attachment\n" if $self->{verbose};
 		$entity->bodyhandle->binmode(1);
 		my $fd = $entity->bodyhandle->open('r');
 		my $filename = $entity->head->mime_attr('Content-Disposition.filename');
-		$filename =~ s:/:_:;
-		open(my $outFd, ">files/$filename");
+		$filename =~ s:[/\\]:_:g;
+		open(my $outFd, '>:bytes', "files/$filename");
 		binmode $outFd;
 		while(<$fd>) {
 			print $outFd $_;
@@ -153,6 +160,8 @@ sub myFromRaw {
 my $self = init();
 lockKml($self);
 
+$self->{verbose} = $verbose;
+
 my $doc = loadKml($self);
 #my @base = $doc->findnodes('/kml/Document');
 my @messageBase = $doc->findnodes("/kml/Document/Folder[name='Messages']");
@@ -161,10 +170,20 @@ my @photoBase = $doc->findnodes("/kml/Document/Folder[name='Photos']");
 die "Can't find base for photos" if @photoBase != 1;
 die "Can't find base for messages" if @messageBase != 1;
 
+my $tmp = "/tmp";
+$tmp = $ENV{TEMP} if defined $ENV{TEMP};
+
 my $parser = new MIME::Parser;
-$parser->output_under("/tmp");
-binmode STDIN;
-my $entity = $parser->parse(\*STDIN);
+$parser->output_under($tmp);
+my $entity;
+if(defined $ARGV[0]) {
+	open(my $fd, '<:bytes', $ARGV[0]) or die "failed to read";
+	binmode $fd;
+	$entity = $parser->parse($fd);
+} else {
+	binmode STDIN;
+	$entity = $parser->parse(\*STDIN);
+}
 #$entity->parts(1)->print_body;
 #$entity->dump_skeleton;
 #$entity->head->decode;
