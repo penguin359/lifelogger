@@ -34,6 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use Getopt::Long;
 use Time::Local;
 use XML::DOM;
 use XML::DOM::XPath;
@@ -42,8 +43,13 @@ use Data::Dumper;
 
 require 'common.pl';
 
+my $verbose = 0;
+my $result = GetOptions("Verbose" => \$verbose);
+
 my $self = init();
 lockKml($self);
+
+$self->{verbose} = $verbose;
 
 sub addImage {
 	my($path, $self, $doc, $base) = @_;
@@ -51,19 +57,19 @@ sub addImage {
 	my $website = $self->{settings}->{website};
 
 	return if ! -f $path || ! -s $path;
+	print "Processing $path\n" if $self->{verbose};
 	my $exif = new Image::ExifTool;
-	open(my $fd, $path) or die "Can't open file $path";
-	binmode($fd, 'bytes');
+	open(my $fd, '<:bytes', $path) or die "Can't open file $path";
+	binmode($fd);
 	my $info = $exif->ImageInfo($fd);
 	close $fd;
 	#print Dumper($info);
 	my $filename = $path;
 	$filename =~ s:.*/::;
 	$filename =~ s:\.[jJ][pP][eE]?[gG]$:.jpg:;
-	#print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
+	print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
 	rename($path, "images/$filename") or die "Failed rename(): $!";
-	system('convert','-geometry','160x160',"images/$filename","images/160/$filename");
-	system('convert','-geometry','32x32',"images/$filename","images/32/$filename");
+	createThumbnails($self, "images/$filename");
 
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
 	    $atime,$mtime,$ctime,$blksize,$blocks) = stat("images/$filename");

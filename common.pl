@@ -351,4 +351,47 @@ sub parseIsoTime {
 	}
 }
 
+sub createThumbnailsMod {
+	my($self, $file, $path, $name, @sizes) = @_;
+
+	print "Using Image::Resize\n" if $self->{verbose};
+	my $image = new Image::Resize $file;
+	foreach (@sizes) {
+		print "Creating ${_}x${_} thumbnail for $name\n" if $self->{verbose};
+		my $thumbnail = $image->resize($_, $_);
+		open(my $fd, '>:bytes', "$path/$_/$name") or die "Can't open thumbnail: $!";
+		binmode($fd);
+		print $fd $thumbnail->jpeg(50);
+		close $fd;
+	}
+}
+
+sub createThumbnailsIM {
+	my($self, $file, $path, $name, @sizes) = @_;
+
+	print "Using ImageMagick\n" if $self->{verbose};
+	foreach (@sizes) {
+		print "Creating ${_}x${_} thumbnail for $name\n" if $self->{verbose};
+		system('convert', '-geometry', $_.'x'.$_, $file, "$path/$_/$name");
+	}
+}
+
+sub createThumbnails {
+	my($self, $file) = @_;
+
+	$file =~ m:^(.*/)?([^/]+)$:;
+	my($path, $name) = ($1, $2);
+	$path = "." if !defined($path);
+	if(!defined($name) || $name eq "") {
+		warn "Unparsable image filename '$file'";
+		return;
+	}
+
+	if(eval 'require Image::Resize') {
+		createThumbnailsMod($self, $file, $path, $name, ("32", "160"));
+	} else {
+		createThumbnailsIM($self, $file, $path, $name, ("32", "160"));
+	}
+}
+
 1;
