@@ -53,12 +53,15 @@ sub addImage {
 	return if ! -f $path || ! -s $path;
 	my $exif = new Image::ExifTool;
 	open(my $fd, $path) or die "Can't open file $path";
+	binmode($fd, 'bytes');
 	my $info = $exif->ImageInfo($fd);
+	close $fd;
 	#print Dumper($info);
 	my $filename = $path;
 	$filename =~ s:.*/::;
-	$filename =~ s:\.[jJ][pP][gG]$:.jpg:;
-	rename($path, "images/$filename");
+	$filename =~ s:\.[jJ][pP][eE]?[gG]$:.jpg:;
+	#print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
+	rename($path, "images/$filename") or die "Failed rename(): $!";
 	system('convert','-geometry','160x160',"images/$filename","images/160/$filename");
 	system('convert','-geometry','32x32',"images/$filename","images/32/$filename");
 
@@ -66,7 +69,7 @@ sub addImage {
 	    $atime,$mtime,$ctime,$blksize,$blocks) = stat("images/$filename");
 
 	my $timestamp = $mtime;
-	die "Failed to stat $path" if(!defined($timestamp) || $timestamp == 0);
+	die "Failed to stat $path: $!" if(!defined($timestamp) || $timestamp == 0);
 	if(exists $info->{DateTimeOriginal}) {
 		$info->{DateTimeOriginal} =~ /(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)/;
 		my $year = $1;
@@ -118,8 +121,12 @@ die "Can't find base for unsorted photos" if @base != 1;
 
 $self->{rssFeed} = loadRssFeed($self);
 $self->{atomFeed} = loadAtomFeed($self);
-foreach(@ARGV) {
-	addImage($_, $self, $doc, $base[0]);
+if(!@ARGV) {
+	addImage($_, $self, $doc, $base[0])
+	    foreach glob "uploads/*.[jJ][pP][gG] uploads/*.[jJ][pP][eE][gG]";
+} else {
+	addImage($_, $self, $doc, $base[0])
+	    foreach @ARGV;
 }
 saveKml($self, $doc);
 saveRssFeed($self, $self->{rssFeed});
