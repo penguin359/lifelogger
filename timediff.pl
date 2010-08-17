@@ -34,8 +34,13 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use Getopt::Long;
 
 require 'common.pl';
+
+my $diff = 300;
+my $result = GetOptions(
+	"diff=i" => \$diff);
 
 my $self = init();
 lockKml($self);
@@ -43,7 +48,7 @@ lockKml($self);
 my $entries = loadData($self);
 my $lastTimestamp = @{$entries}[0]->{timestamp};
 foreach(@$entries) {
-	if(abs($_->{timestamp} - $lastTimestamp) > 300) {
+	if(abs($_->{timestamp} - $lastTimestamp) > $diff) {
 		printf "Big time difference: %.2f @ %d\n", ($_->{timestamp} - $lastTimestamp)/60, $_->{timestamp};
 	}
 	$lastTimestamp = $_->{timestamp};

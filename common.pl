@@ -71,6 +71,14 @@ $files->{kml} = "$settings->{cwd}/live.kml";
 $files->{rss} = "$settings->{cwd}/live.rss";
 $files->{atom} = "$settings->{cwd}/live.atom";
 
+my $sources = [
+	{
+		id => '1',
+		type => 'InstaMapper',
+		apiKey => $settings->{apiKey},
+	},
+];
+
 sub createPlacemark {
 	my($doc) = @_;
 
@@ -297,6 +305,7 @@ sub init {
 
 	$self->{settings} = $settings;
 	$self->{files} = $files;
+	$self->{sources} = $sources;
 
 	chdir $settings->{cwd};
 	umask 0022;

@@ -52,18 +52,17 @@ die "Usage: $0 [-n | -s] [file.csv]" if !$result || @ARGV > 1;
 my $self = init();
 lockKml($self);
 
-my $apiKey = $self->{settings}->{apiKey};
-
-my $entries = loadData($self);
-my $lastTimestamp = lastTimestamp($self);
-$lastTimestamp++;
-
 my $newEntries = [];
 if(defined($ARGV[0])) {
 	open(my $fd, $ARGV[0]) or die "Can't load file";
 	my @lines = <$fd>;
 	($newEntries) = parseData($self, \@lines);
 } else {
+	my $sources = $self->{sources};
+	my $apiKey = $sources->[0]->{apiKey};
+	my $lastTimestamp = lastTimestamp($self, $sources->[0]->{id});
+	$lastTimestamp++;
+
 	my $request = HTTP::Request->new(GET => "http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp");
 	my $ua = LWP::UserAgent->new;
 	my $response = $ua->request($request);

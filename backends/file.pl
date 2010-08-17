@@ -74,6 +74,7 @@ sub updateLastTimestamp {
 sub lastTimestamp {
 	my($self) = @_;
 
+	return $self->{sources}->[0]->{lastTimestamp} if exists($self->{sources}->[0]->{lastTimestamp});
 	return $self->{lastTimestamp} if exists($self->{lastTimestamp});
 	if(open(my $fd, $timestampFile)) {
 		my $timestamp = <$fd>;
