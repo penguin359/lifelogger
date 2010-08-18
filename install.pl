@@ -74,6 +74,12 @@ foreach my $lib (
 	eval "require $lib"; print STDERR "Need to install $lib\n" if $@;
 }
 
+eval "require Image::Resize";
+my $dummy = `convert`;
+if($@ && $?) {
+	print STDERR "Either Image::Resize needs to be installed or ImageMagick must be in the PATH\n";
+}
+
 eval {
 	require XML::DOM;
 	$XML::DOM::VERSION =~ /^(\d+)\.(\d+)$/;

@@ -34,6 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use Getopt::Long;
 use Time::Local;
 use XML::DOM;
 use XML::DOM::XPath;
@@ -41,6 +42,9 @@ use Image::ExifTool;
 use Data::Dumper;
 
 require 'common.pl';
+
+my $verbose = 0;
+my $result = GetOptions("Verbose" => \$verbose);
 
 if(!defined($ARGV[0])) {
 	die "Usage: $0 image.jpg";
@@ -52,23 +56,15 @@ my $utcTime = 0;
 my $self = init();
 lockKml($self);
 
+$self->{verbose} = $verbose;
+
 my $exif = new Image::ExifTool;
 $exif->Options({PrintConv => 0});
 my $info = $exif->ImageInfo($file);
 #$exif->ExtractInfo($file);
 my $timestamp = 0;
 if(exists $info->{DateTimeOriginal}) {
-	$info->{DateTimeOriginal} =~ /(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)/;
-	my $year = $1;
-	my $mon = $2;
-	my $mday = $3;
-	my $hour = $4;
-	my $min = $5;
-	my $sec = $6;
-	my $tzoffset = (-7*60 + 0)*60;
-	$tzoffset *= -1;
-	#print "SD: $mday $mon $year  $hour:$min:$sec\n";
-	$timestamp = timegm($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
+	$timestamp = parseExifDate($info->{DateTimeOriginal});
 
 #Goal below is to set GPSTimeStamp to UTC time on line 112;
 	$utcTime = $hour = $tzoffset.":".$min.":".$sec;

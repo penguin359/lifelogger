@@ -18,16 +18,18 @@
 # 4)  Replace jhead usage with Image::ExifTool
 # 5)  Ensure it handles photos from multiple cameras correctly, especially camera phones.
 
-use Date::Manip qw(UnixDate);
+use 5.008;
 use strict;
 use warnings;
-my @args = @ARGV;
-my @files;
+use Getopt::Long;
+use Time::Local;
+
 my $jhead = `which jhead`;		chomp($jhead);
 my $jpegtran = `which jpegtran`;	chomp($jpegtran);
 my $logfile = "/dev/null";
 
 my @fancy_month = ('Unknown', '01-Jan', '02-Feb', '03-March', '04-April', '05-May', '06-June', '07-July', '08-August', '09-Sept', '10-Oct', '11-Nov', '12-Dec');
+
 if ( ! -x $jpegtran ) {
 	print "This script requires jpegtran to be installed\n";
 	die("please install it before continuing.\n");
@@ -35,32 +37,33 @@ if ( ! -x $jpegtran ) {
 if( ! -x $jhead ) {
 	print "This script requires jhead to be installed\n";
 	die("please install it before continuing.\n");
-} else {
-	$jhead .= ' -exonly';
 }
 
-##insert opts code splicing from @args
-###temporarily hardwire script to always log & compress:
-my $recompress = 1;
-my $logging = 1;
-###
-##
+$jhead .= ' -exonly';
 
-if(! scalar(@args)) {
+my $recompress = 0;
+my $logging = 0;
+my $result = GetOptions(
+	   "recompress" => \$recompress,
+	   "log" => \$logging);
+
+if(!$result) {
+	print STDERR "Usage: $0 [-log] [-recompress] images.jpg...\n";
+	exit 1;
+}
+
+if(!@ARGV) {
 	die("Error, too few arguments.\nTry photocat -h for help.\n");
-} else {
-	@files = @args;
 }
 
 my $ext = 'jpeg';
 
-foreach my $file (@files) {
-        my $comments = '"Original Filename:   "' . ${file} . '" Copyright 2009 Ronald@Bynoe.us"';
-	my @start = time();
+foreach my $file (@ARGV) {
+	my $comments = '"Original Filename:   "' . $file . '" Copyright 2009 Ronald@Bynoe.us"';
 	my $data = `$jhead '$file'`;
-	$data=~/Date\/Time\s+:\s+(\d{4}):(\d{1,2}):(\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})/;
+	$data=~/Date\/Time\s*:\s*(\d{4}):(\d{1,2}):(\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})/;
 	my ($year, $month, $day, $hour, $minute, $second) = ($1, $2, $3, $4, $5, $6);
-	$data=~/Camera\s+model\s+:\s+([^\n]+)/;
+	$data=~/Camera\s+model\s*:\s*([^\n]+)/;
 	my $model = $1;
 
 	$model =~ s/$_//gi foreach qw(digital camera kodak canon olympus zoom);
@@ -68,53 +71,44 @@ foreach my $file (@files) {
 
 
 	if($logging) {
-	$logfile = sprintf("%s/%s/%s", $year, $fancy_month[$month], "output.log");
+		print "Yes log.\n";
+		$logfile = sprintf("%s/%s/%s", $year, $fancy_month[$month], "output.log");
 	}
 
 	if($recompress) {
-	my $oSize = (-s $file);
+		print "Yes recompress.\n";
+		my $oSize = -s $file;
 
-	print "Optimizing photo (this is a lossless transform)...";
+		print "Optimizing photo (this is a lossless transform)...";
 		system("$jhead -c -dt -autorot '$file' 1>> $logfile 2>&1 &&
 		$jhead -c -cmd '\'$jpegtran\' -progressive -o &i > &o' '$file' 1>> $logfile 2>&1");
-	my $percent = sprintf ("%.2f", (100 - (((-s $file)/$oSize) * 100)));
-	printf "%s is %.2f%% smaller, done.\n",$file,$percent;
+		my $percent = sprintf ("%.2f", 100 - (-s $file)/$oSize*100);
+		printf "%s is %.2f%% smaller, done.\n",$file,$percent;
 	}
 
 	print "Sorting photo...";
 	my $dir = sprintf("%s/%s/%s/%s", $year, $fancy_month[$month], $day);
-	my $timestamp;
 	if ( ! -e $dir ) {
-	#Calling the system is bad, but
-		system("mkdir -p '${dir}'");
-	#the below line doesn't support the -p(arent) option
-	#and I don't know how to "make" it work.
-	#mkdir($dir,0755);
-	#
-		$timestamp = UnixDate(sprintf("%s/%s/%s 00:00:00", $month, $day, $year), '%s');
+		system("mkdir", "-p", $dir);
+		my $timestamp = timelocal(0, 0, 0, $day, $month-1, $year);
 		utime($timestamp, $timestamp, $dir);
 	}
 
 	my $newfile=sprintf('%s/Photo_%02i%02i', $dir, $hour, $minute);
-	if ( -e "${newfile}.${ext}" ) {
+	if ( -e "$newfile.$ext" ) {
 		$newfile .= sprintf("%02i", $second);
-		if ( -e "${newfile}.${ext}") {
-			warn("bailing. ${newfile}.${ext} exists already!\n");
+		if ( -e "$newfile.$ext") {
+			warn("bailing. $newfile.$ext exists already!\n");
 			next;
 		}
 	}
 	print "moved to $newfile.$ext.\n";
-	system("`wrjpgcom -c '${comments}' '${file}' > '${newfile}.${ext}';rm '$file'`");
-	#$timestamp = UnixDate(sprintf("%s/%s/%s %s:%s:%s", $month, $day, $year, $hour, $minute, $second), '%s');
+	system("wrjpgcom -c '$comments' '$file' > '$newfile.$ext'");
+	unlink($file);
 	print "Setting file timestamp to original date & time...";
+	#my $timestamp = timelocal($second, $minute, $hour, $day, $month-1, $year);
 	#utime($timestamp, $timestamp, $newfile.$ext);
 	system("jhead -c -ft '${newfile}.${ext}' 1>> $logfile 2>&1");
-	#
-	#use Digest::MD5;
-	#my $file = shift || "/etc/passwd";
-	#open(FILE, $file) or die "Can't open '$file': $!";
-	#binmode(FILE);
-	#print Digest::MD5->new->addfile(*FILE)->hexdigest, " $file\n";
 	print "done.\n";
 	print "Finished processing Photo_$hour$minute.$ext\n";
 }

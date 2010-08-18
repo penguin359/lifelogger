@@ -34,6 +34,7 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use Getopt::Long;
 use Time::Local;
 use XML::DOM;
 use XML::DOM::XPath;
@@ -42,8 +43,13 @@ use Data::Dumper;
 
 require 'common.pl';
 
+my $verbose = 0;
+my $result = GetOptions("Verbose" => \$verbose);
+
 my $self = init();
 lockKml($self);
+
+$self->{verbose} = $verbose;
 
 sub addImage {
 	my($path, $self, $doc, $base) = @_;
@@ -51,34 +57,26 @@ sub addImage {
 	my $website = $self->{settings}->{website};
 
 	return if ! -f $path || ! -s $path;
+	print "Processing $path\n" if $self->{verbose};
 	my $exif = new Image::ExifTool;
-	open(my $fd, $path) or die "Can't open file $path";
+	open(my $fd, '<:bytes', $path) or die "Can't open file $path";
+	binmode($fd);
 	my $info = $exif->ImageInfo($fd);
-	#print Dumper($info);
+	close $fd;
 	my $filename = $path;
 	$filename =~ s:.*/::;
-	$filename =~ s:\.[jJ][pP][gG]$:.jpg:;
-	rename($path, "images/$filename");
-	system('convert','-geometry','160x160',"images/$filename","images/160/$filename");
-	system('convert','-geometry','32x32',"images/$filename","images/32/$filename");
+	$filename =~ s:\.[jJ][pP][eE]?[gG]$:.jpg:;
+	print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
+	rename($path, "images/$filename") or die "Failed rename(): $!";
+	createThumbnails($self, "images/$filename");
 
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
 	    $atime,$mtime,$ctime,$blksize,$blocks) = stat("images/$filename");
 
 	my $timestamp = $mtime;
-	die "Failed to stat $path" if(!defined($timestamp) || $timestamp == 0);
+	die "Failed to stat $path: $!" if(!defined($timestamp) || $timestamp == 0);
 	if(exists $info->{DateTimeOriginal}) {
-		$info->{DateTimeOriginal} =~ /(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)/;
-		my $year = $1;
-		my $mon = $2;
-		my $mday = $3;
-		my $hour = $4;
-		my $min = $5;
-		my $sec = $6;
-		my $tzoffset = (-7*60 + 0)*60;
-		$tzoffset *= -1;
-		#print "SD: $mday $mon $year  $hour:$min:$sec\n";
-		$timestamp = timegm($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
+		$timestamp = parseExifDate($info->{DateTimeOriginal});
 	}
 	my $latitude;
 	my $longitude;
@@ -110,7 +108,6 @@ sub addImage {
 }
 
 my $doc = loadKml($self);
-#my @base = $doc->findnodes('/kml/Document');
 my @base = $doc->findnodes("/kml/Document/Folder[name='Unsorted Photos']");
 
 die "Can't find base for unsorted photos" if @base != 1;
@@ -118,8 +115,12 @@ die "Can't find base for unsorted photos" if @base != 1;
 
 $self->{rssFeed} = loadRssFeed($self);
 $self->{atomFeed} = loadAtomFeed($self);
-foreach(@ARGV) {
-	addImage($_, $self, $doc, $base[0]);
+if(!@ARGV) {
+	addImage($_, $self, $doc, $base[0])
+	    foreach glob "uploads/*.[jJ][pP][gG] uploads/*.[jJ][pP][eE][gG]";
+} else {
+	addImage($_, $self, $doc, $base[0])
+	    foreach @ARGV;
 }
 saveKml($self, $doc);
 saveRssFeed($self, $self->{rssFeed});
