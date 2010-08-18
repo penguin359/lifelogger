@@ -49,6 +49,11 @@ require 'common.pl';
 my $verbose = 0;
 my $result = GetOptions("Verbose" => \$verbose);
 
+my $self = init();
+lockKml($self);
+
+$self->{verbose} = $verbose;
+
 my $descrText = "";
 
 sub scanEntity {
@@ -85,17 +90,7 @@ sub scanEntity {
 
 		my $timestamp = $self->{date};
 		if(exists $info->{DateTimeOriginal}) {
-			$info->{DateTimeOriginal} =~ /(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)/;
-			my $year = $1;
-			my $mon = $2;
-			my $mday = $3;
-			my $hour = $4;
-			my $min = $5;
-			my $sec = $6;
-			my $tzoffset = (-7*60 + 0)*60;
-			$tzoffset *= -1;
-			#print "SD: $mday $mon $year  $hour:$min:$sec\n";
-			$timestamp = timegm($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
+			$timestamp = parseExifDate($info->{DateTimeOriginal});
 		}
 		my $latitude;
 		my $longitude;
@@ -156,11 +151,6 @@ sub myFromRaw {
 	my($data, $charset) = @_;
 	decode('us-ascii', $data);
 }
-
-my $self = init();
-lockKml($self);
-
-$self->{verbose} = $verbose;
 
 my $doc = loadKml($self);
 #my @base = $doc->findnodes('/kml/Document');
