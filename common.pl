@@ -260,21 +260,23 @@ sub addAtomEntry {
 }
 
 sub loadKml {
-	my($self) = @_;
+	my($self, $file) = @_;
 
+	$file = $self->{files}->{kml} if !defined($file);
 	my $parser = new XML::DOM::Parser;
-	my $doc = $parser->parsefile($self->{files}->{kml});
+	my $doc = $parser->parsefile($file);
 
 	return $doc;
 }
 
 sub saveKml {
-	my($self, $doc) = @_;
+	my($self, $doc, $file) = @_;
 
+	$file = $self->{files}->{kml} if !defined($file);
 	#print $doc->toString;
-	open(my $fd, ">$self->{files}->{kml}") or die "Failed to open KML for writing";
+	open(my $fd, ">", $file) or die "Failed to open KML for writing";
 	$doc->printToFileHandle($fd);
-	#$doc->printToFile($self->{files}->{kml});
+	#$doc->printToFile($file);
 }
 
 sub lockKml {

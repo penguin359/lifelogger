@@ -53,5 +53,4 @@ foreach my $folder ('Twitter', 'Locations', 'Unsorted Photos') {
 	$base->removeChild($node);
 }
 
-open(my $outFd, ">$mobileFile") or die "Failed to open mobile KML for writing";
-$doc->printToFileHandle($outFd);
+saveKml($self, $doc, $mobileFile);
