@@ -36,7 +36,6 @@ use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl ':flock';
 use POSIX qw(strftime);
 use Time::Local;
-use XML::RSS;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
 use DBI;
@@ -206,6 +205,8 @@ sub escapeText {
 sub loadRssFeed {
 	my($self) = @_;
 
+	eval "require XML::RSS;";
+	return if $@;
 	my $rssFeed = new XML::RSS version => '2.0', encode_cb => \&escapeText;
 	$rssFeed->parsefile($self->{files}->{rss});
 	return $rssFeed;
@@ -220,6 +221,7 @@ sub loadAtomFeed {
 sub saveRssFeed {
 	my($self, $feed) = @_;
 
+	return if !defined($feed);
 	$feed->save($self->{files}->{rss});
 }
 
@@ -236,6 +238,7 @@ sub saveAtomFeed {
 sub addRssEntry {
 	my($self, $feed, $title, $id, $content) = @_;
 
+	return if !defined($feed);
 	$feed->add_item(title      => $title,
 		       guid        => $id,
 		       description => $content);
