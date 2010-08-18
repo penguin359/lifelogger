@@ -192,6 +192,21 @@ sub parseDate {
 	return timegm($sec, $min, $hour, $mday, $mon-1, $year) - $tzoffset;
 }
 
+sub parseExifDate {
+	my($date) = @_;
+
+	$date =~ /(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)/;
+	my $year = $1;
+	my $mon = $2;
+	my $mday = $3;
+	my $hour = $4;
+	my $min = $5;
+	my $sec = $6;
+	#my $tzoffset = (-7*60 + 0)*60;
+	#return timegm($sec, $min, $hour, $mday, $mon-1, $year) - $tzoffset;
+	return timelocal($sec, $min, $hour, $mday, $mon-1, $year);
+}
+
 sub escapeText {
 	my($self, $text) = @_;
 

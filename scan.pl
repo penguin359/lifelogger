@@ -63,7 +63,6 @@ sub addImage {
 	binmode($fd);
 	my $info = $exif->ImageInfo($fd);
 	close $fd;
-	#print Dumper($info);
 	my $filename = $path;
 	$filename =~ s:.*/::;
 	$filename =~ s:\.[jJ][pP][eE]?[gG]$:.jpg:;
@@ -77,17 +76,7 @@ sub addImage {
 	my $timestamp = $mtime;
 	die "Failed to stat $path: $!" if(!defined($timestamp) || $timestamp == 0);
 	if(exists $info->{DateTimeOriginal}) {
-		$info->{DateTimeOriginal} =~ /(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)/;
-		my $year = $1;
-		my $mon = $2;
-		my $mday = $3;
-		my $hour = $4;
-		my $min = $5;
-		my $sec = $6;
-		my $tzoffset = (-7*60 + 0)*60;
-		$tzoffset *= -1;
-		#print "SD: $mday $mon $year  $hour:$min:$sec\n";
-		$timestamp = timegm($sec, $min, $hour, $mday, $mon-1, $year-1900) + $tzoffset;
+		$timestamp = parseExifDate($info->{DateTimeOriginal});
 	}
 	my $latitude;
 	my $longitude;
@@ -119,7 +108,6 @@ sub addImage {
 }
 
 my $doc = loadKml($self);
-#my @base = $doc->findnodes('/kml/Document');
 my @base = $doc->findnodes("/kml/Document/Folder[name='Unsorted Photos']");
 
 die "Can't find base for unsorted photos" if @base != 1;

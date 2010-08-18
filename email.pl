@@ -33,7 +33,7 @@ use warnings;
 use strict;
 
 use utf8;
-use open ':utf8';
+use open ':utf8', ':std';
 use Getopt::Long;
 use Time::Local;
 use XML::DOM;
