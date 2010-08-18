@@ -36,7 +36,6 @@ use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl ':flock';
 use POSIX qw(strftime);
 use Time::Local;
-use XML::RSS;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
 use DBI;
@@ -200,6 +199,21 @@ sub parseDate {
 	return timegm($sec, $min, $hour, $mday, $mon-1, $year) - $tzoffset;
 }
 
+sub parseExifDate {
+	my($date) = @_;
+
+	$date =~ /(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)/;
+	my $year = $1;
+	my $mon = $2;
+	my $mday = $3;
+	my $hour = $4;
+	my $min = $5;
+	my $sec = $6;
+	#my $tzoffset = (-7*60 + 0)*60;
+	#return timegm($sec, $min, $hour, $mday, $mon-1, $year) - $tzoffset;
+	return timelocal($sec, $min, $hour, $mday, $mon-1, $year);
+}
+
 sub escapeText {
 	my($self, $text) = @_;
 
@@ -214,6 +228,8 @@ sub escapeText {
 sub loadRssFeed {
 	my($self) = @_;
 
+	eval "require XML::RSS;";
+	return if $@;
 	my $rssFeed = new XML::RSS version => '2.0', encode_cb => \&escapeText;
 	$rssFeed->parsefile($self->{files}->{rss});
 	return $rssFeed;
@@ -228,6 +244,7 @@ sub loadAtomFeed {
 sub saveRssFeed {
 	my($self, $feed) = @_;
 
+	return if !defined($feed);
 	$feed->save($self->{files}->{rss});
 }
 
@@ -244,6 +261,7 @@ sub saveAtomFeed {
 sub addRssEntry {
 	my($self, $feed, $title, $id, $content) = @_;
 
+	return if !defined($feed);
 	$feed->add_item(title      => $title,
 		       guid        => $id,
 		       description => $content);
@@ -359,6 +377,49 @@ sub parseIsoTime {
 	} else {
 		# No offset specified so use local time
 		return timelocal($sec, $min, $hour, $mday, $mon-1, $year);
+	}
+}
+
+sub createThumbnailsMod {
+	my($self, $file, $path, $name, @sizes) = @_;
+
+	print "Using Image::Resize\n" if $self->{verbose};
+	my $image = new Image::Resize $file;
+	foreach (@sizes) {
+		print "Creating ${_}x${_} thumbnail for $name\n" if $self->{verbose};
+		my $thumbnail = $image->resize($_, $_);
+		open(my $fd, '>:bytes', "$path/$_/$name") or die "Can't open thumbnail: $!";
+		binmode($fd);
+		print $fd $thumbnail->jpeg(50);
+		close $fd;
+	}
+}
+
+sub createThumbnailsIM {
+	my($self, $file, $path, $name, @sizes) = @_;
+
+	print "Using ImageMagick\n" if $self->{verbose};
+	foreach (@sizes) {
+		print "Creating ${_}x${_} thumbnail for $name\n" if $self->{verbose};
+		system('convert', '-geometry', $_.'x'.$_, $file, "$path/$_/$name");
+	}
+}
+
+sub createThumbnails {
+	my($self, $file) = @_;
+
+	$file =~ m:^(.*/)?([^/]+)$:;
+	my($path, $name) = ($1, $2);
+	$path = "." if !defined($path);
+	if(!defined($name) || $name eq "") {
+		warn "Unparsable image filename '$file'";
+		return;
+	}
+
+	if(eval 'require Image::Resize') {
+		createThumbnailsMod($self, $file, $path, $name, ("32", "160"));
+	} else {
+		createThumbnailsIM($self, $file, $path, $name, ("32", "160"));
 	}
 }
 
