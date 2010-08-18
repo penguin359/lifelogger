@@ -22,7 +22,7 @@ use 5.008;
 use strict;
 use warnings;
 use Getopt::Long;
-use Date::Manip qw(UnixDate);
+use Time::Local;
 
 my $jhead = `which jhead`;		chomp($jhead);
 my $jpegtran = `which jpegtran`;	chomp($jpegtran);
@@ -88,25 +88,25 @@ foreach my $file (@ARGV) {
 
 	print "Sorting photo...";
 	my $dir = sprintf("%s/%s/%s/%s", $year, $fancy_month[$month], $day);
-	my $timestamp;
 	if ( ! -e $dir ) {
 		system("mkdir", "-p", $dir);
-		$timestamp = UnixDate(sprintf("%s/%s/%s 00:00:00", $month, $day, $year), '%s');
+		my $timestamp = timelocal(0, 0, 0, $day, $month-1, $year);
 		utime($timestamp, $timestamp, $dir);
 	}
 
 	my $newfile=sprintf('%s/Photo_%02i%02i', $dir, $hour, $minute);
-	if ( -e "${newfile}.${ext}" ) {
+	if ( -e "$newfile.$ext" ) {
 		$newfile .= sprintf("%02i", $second);
-		if ( -e "${newfile}.${ext}") {
-			warn("bailing. ${newfile}.${ext} exists already!\n");
+		if ( -e "$newfile.$ext") {
+			warn("bailing. $newfile.$ext exists already!\n");
 			next;
 		}
 	}
 	print "moved to $newfile.$ext.\n";
-	system("wrjpgcom -c '$comments' '$file' > '$newfile.$ext'; rm '$file'");
-	#$timestamp = UnixDate(sprintf("%s/%s/%s %s:%s:%s", $month, $day, $year, $hour, $minute, $second), '%s');
+	system("wrjpgcom -c '$comments' '$file' > '$newfile.$ext'");
+	unlink($file);
 	print "Setting file timestamp to original date & time...";
+	#my $timestamp = timelocal($second, $minute, $hour, $day, $month-1, $year);
 	#utime($timestamp, $timestamp, $newfile.$ext);
 	system("jhead -c -ft '${newfile}.${ext}' 1>> $logfile 2>&1");
 	print "done.\n";
