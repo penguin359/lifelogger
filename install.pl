@@ -59,6 +59,30 @@ sub ask {
 
 die "Please run installer.pl from top-level of checkout" if ! -f 'settings.pl.dist';
 
+my $activePerl = 0;
+my $autoinstall = '?';
+
+sub installLib {
+	my($lib) = @_;
+
+	if($autoinstall eq '?') {
+		$autoinstall = 0;
+		if(eval "require ActivePerl") {
+			print "You appear to be using ActivePerl\n";
+			print "Do you want to automatically install dependencies? ";
+			my $ans = <>;
+			chomp($ans);
+			$activePerl = 1;
+			$autoinstall = 1 if $ans =~ /^y(es)?$/i;
+			print "Not installing dependencies.\n" if !$autoinstall;
+			print "\n";
+		}
+	}
+	if($autoinstall && $activePerl) {
+		system("ppm", "install", $lib);
+	}
+}
+
 print "Installing Photocatalog\n";
 print "\n";
 print "Checking dependencies...\n";
@@ -71,13 +95,17 @@ foreach my $lib (
     "XML::RSS",
     "XML::Atom",
     "DBI") {
-	eval "require $lib"; print STDERR "Need to install $lib\n" if $@;
+	if(!eval "require $lib") {
+		print STDERR "Need to install $lib\n";
+		installLib($lib);
+	}
 }
 
 eval "require Image::Resize";
 my $dummy = `convert`;
 if($@ && $?) {
 	print STDERR "Either Image::Resize needs to be installed or ImageMagick must be in the PATH\n";
+	installLib("Image::Resize");
 }
 
 eval {
