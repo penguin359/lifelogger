@@ -93,10 +93,12 @@ foreach my $lib (
     "XML::DOM::XPath",
     "HTTP::Request",
     "XML::RSS",
-    "XML::Atom",
-    "DBI") {
+    "XML::Atom") {
 	if(!eval "require $lib") {
 		print STDERR "Need to install $lib\n";
+		if($lib eq "XML::RSS" || $lib eq "XML::Atom") {
+			print STDERR "  This is a non-essential module\n";
+		}
 		installLib($lib);
 	}
 }
@@ -127,6 +129,9 @@ at http://www.instamapper.com/.
 
 The default API Key is a demo car that can be used for testing.  Only
 one device is supported at this time so don't use a Master API Key.
+
+You can specify . for the Website if you just want to view the KML
+files locally in Google Earth.
 
 EOF
 
