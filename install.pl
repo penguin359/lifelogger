@@ -59,6 +59,30 @@ sub ask {
 
 die "Please run installer.pl from top-level of checkout" if ! -f 'settings.pl.dist';
 
+my $activePerl = 0;
+my $autoinstall = '?';
+
+sub installLib {
+	my($lib) = @_;
+
+	if($autoinstall eq '?') {
+		$autoinstall = 0;
+		if(eval "require ActivePerl") {
+			print "You appear to be using ActivePerl\n";
+			print "Do you want to automatically install dependencies? ";
+			my $ans = <>;
+			chomp($ans);
+			$activePerl = 1;
+			$autoinstall = 1 if $ans =~ /^y(es)?$/i;
+			print "Not installing dependencies.\n" if !$autoinstall;
+			print "\n";
+		}
+	}
+	if($autoinstall && $activePerl) {
+		system("ppm", "install", $lib);
+	}
+}
+
 print "Installing Photocatalog\n";
 print "\n";
 print "Checking dependencies...\n";
@@ -69,15 +93,21 @@ foreach my $lib (
     "XML::DOM::XPath",
     "HTTP::Request",
     "XML::RSS",
-    "XML::Atom",
-    "DBI") {
-	eval "require $lib"; print STDERR "Need to install $lib\n" if $@;
+    "XML::Atom") {
+	if(!eval "require $lib") {
+		print STDERR "Need to install $lib\n";
+		if($lib eq "XML::RSS" || $lib eq "XML::Atom") {
+			print STDERR "  This is a non-essential module\n";
+		}
+		installLib($lib);
+	}
 }
 
 eval "require Image::Resize";
 my $dummy = `convert`;
 if($@ && $?) {
 	print STDERR "Either Image::Resize needs to be installed or ImageMagick must be in the PATH\n";
+	installLib("Image::Resize");
 }
 
 eval {
@@ -99,6 +129,9 @@ at http://www.instamapper.com/.
 
 The default API Key is a demo car that can be used for testing.  Only
 one device is supported at this time so don't use a Master API Key.
+
+You can specify . for the Website if you just want to view the KML
+files locally in Google Earth.
 
 EOF
 

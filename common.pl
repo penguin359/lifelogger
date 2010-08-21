@@ -36,12 +36,7 @@ use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl ':flock';
 use POSIX qw(strftime);
 use Time::Local;
-use XML::Atom::Feed;
-use XML::Atom::Entry;
-use DBI;
-
-$XML::Atom::DefaultVersion = "1.0";
-$XML::Atom::ForceUnicode = 1;
+#use DBI;
 
 # Load default settings
 $settings = {};
@@ -228,8 +223,7 @@ sub escapeText {
 sub loadRssFeed {
 	my($self) = @_;
 
-	eval "require XML::RSS;";
-	return if $@;
+	eval "require XML::RSS;" or return;
 	my $rssFeed = new XML::RSS version => '2.0', encode_cb => \&escapeText;
 	$rssFeed->parsefile($self->{files}->{rss});
 	return $rssFeed;
@@ -237,6 +231,12 @@ sub loadRssFeed {
 
 sub loadAtomFeed {
 	my($self) = @_;
+
+	eval "require XML::Atom::Entry;" or return;
+	eval "require XML::Atom::Feed;" or return;
+
+	$XML::Atom::DefaultVersion = "1.0";
+	$XML::Atom::ForceUnicode = 1;
 
 	return new XML::Atom::Feed $self->{files}->{atom};
 }
@@ -251,6 +251,7 @@ sub saveRssFeed {
 sub saveAtomFeed {
 	my($self, $feed) = @_;
 
+	return if !defined($feed);
 	my $data = $feed->as_xml;
 	utf8::decode($data);
 	open(my $fd, ">$self->{files}->{atom}") or print STDERR "Can't update atom file\n";
@@ -270,6 +271,7 @@ sub addRssEntry {
 sub addAtomEntry {
 	my($self, $feed, $title, $id, $content) = @_;
 
+	return if !defined($feed);
 	my $entry = new XML::Atom::Entry;
 	$entry->title($title);
 	$entry->id($id);

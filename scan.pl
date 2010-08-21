@@ -117,7 +117,7 @@ $self->{rssFeed} = loadRssFeed($self);
 $self->{atomFeed} = loadAtomFeed($self);
 if(!@ARGV) {
 	addImage($_, $self, $doc, $base[0])
-	    foreach glob "uploads/*.[jJ][pP][gG] uploads/*.[jJ][pP][eE][gG]";
+	    foreach glob "$self->{settings}->{cwd}/uploads/*.[jJ][pP][gG] uploads/*.[jJ][pP][eE][gG]";
 } else {
 	addImage($_, $self, $doc, $base[0])
 	    foreach @ARGV;

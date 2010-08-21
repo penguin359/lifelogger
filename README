@@ -46,6 +46,17 @@ local time otherwise.  Most cameras store a timestamp in the photos they
 take, however, there is no time zone information in that information and
 it will be assumed that it is the local time zone.  The FAT filesystem
 that cameras often use to store photos also store a modification date
-that can be used, but again, it is in local time.  Email, on the other
-hand, does store a time zone offset in it's date which this software can
-convert to UTC correctly.
+that can be used, but again, it is in local time.  It's important to
+keep your camera set to the same time zone as the computer running
+photocatalog and not change it while you are traveling.  The camera
+should also be kept up to date with any Daylight Saving Time (DST)
+changes in your computer's time zone.  Email, on the other hand, does
+store a time zone offset in it's date which this software can convert
+to UTC correctly and so, should not be affected by the local time zone
+of the device.  The other important source of time stamps to deal with
+is GPS data.  InstaMapper uses UTC for all it's data, but not all GPS
+devices may be aware of their time zone when creating a GPX file.  If
+you plan to load in any GPX files, it's good to make sure they are uses
+time stamps aware of UTC; the time stamp will end in a Z or [+-]XXXX
+showing the UTC offset.  If it does not, you will need to keep the GPS
+in the same local time as the computer and keep up with DST changes.
