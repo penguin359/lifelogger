@@ -220,7 +220,7 @@
     <name>Path</name>
     <styleUrl>#line</styleUrl>
     <LineString>
-      <coordinates></coordinates>
+      <coordinates> </coordinates>
     </LineString>
   </Placemark>
   <Folder>

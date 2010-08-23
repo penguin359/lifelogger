@@ -87,8 +87,10 @@ print "Installing Photocatalog\n";
 print "\n";
 print "Checking dependencies...\n";
 foreach my $lib (
+    "HTTP::Request",
     "Image::ExifTool",
     "MIME::Tools",
+    "XML::LibXML",
     "XML::DOM",
     "XML::DOM::XPath",
     "HTTP::Request",

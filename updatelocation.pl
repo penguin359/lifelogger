@@ -35,9 +35,8 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
-use XML::DOM;
-use XML::DOM::XPath;
 use HTTP::Request;
+use LWP::UserAgent;
 use Data::Dumper;
 
 require 'common.pl';
@@ -75,7 +74,9 @@ if(defined($ARGV[0])) {
 }
 
 my $doc = loadKml($self);
-my @locationBase = $doc->findnodes("/kml/Document/Folder[name='Locations']");
+my $xc = new XML::LibXML::XPathContext $doc;
+$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
+my @locationBase = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Locations']");
 
 die "Can't find base for location" if @locationBase != 1;
 
@@ -101,13 +102,13 @@ foreach my $entry (@$newEntries) {
 	next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
 	$coordStr .= "\n$entry->{longitude},$entry->{latitude},$entry->{altitude}";
 }
-my @lineNode = $doc->findnodes('/kml/Document/Placemark/LineString/coordinates');
-$lineNode[0]->addText($coordStr);
+my @lineNode = $xc->findnodes('/k:kml/k:Document/k:Placemark/k:LineString/k:coordinates/text()');
+$lineNode[0]->appendData($coordStr);
 
 my $currentPosition = pop @$newEntries;
 if(defined($currentPosition)) {
-	my $positionNode = ${$doc->findnodes("/kml/Document/Placemark[styleUrl='#position']/Point/coordinates/text()")}[0];
-	$positionNode->setNodeValue("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
+	my $positionNode = ${$xc->findnodes("/k:kml/k:Document/k:Placemark[k:styleUrl='#position']/k:Point/k:coordinates/text()")}[0];
+	$positionNode->setData("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
 }
 
 saveKml($self, $doc);

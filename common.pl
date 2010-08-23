@@ -36,6 +36,7 @@ use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl ':flock';
 use POSIX qw(strftime);
 use Time::Local;
+use XML::LibXML;
 #use DBI;
 
 # Load default settings
@@ -283,8 +284,10 @@ sub loadKml {
 	my($self, $file) = @_;
 
 	$file = $self->{files}->{kml} if !defined($file);
-	my $parser = new XML::DOM::Parser;
-	my $doc = $parser->parsefile($file);
+	open(my $fd, "<", $file) or die "Failed to open KML for reading";
+	binmode $fd;
+	my $doc = XML::LibXML->load_xml(IO => $fd);
+	close $fd;
 
 	return $doc;
 }
@@ -293,10 +296,10 @@ sub saveKml {
 	my($self, $doc, $file) = @_;
 
 	$file = $self->{files}->{kml} if !defined($file);
-	#print $doc->toString;
 	open(my $fd, ">", $file) or die "Failed to open KML for writing";
-	$doc->printToFileHandle($fd);
-	#$doc->printToFile($file);
+	binmode $fd;
+	$doc->toFH($fd);
+	close $fd;
 }
 
 sub lockKml {
