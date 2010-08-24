@@ -39,13 +39,13 @@ use XML::DOM;
 use XML::DOM::XPath;
 use Image::ExifTool;
 
-my $rssFile = "twitter.rss";
-$rssFile = shift if @ARGV;
-
 require 'common.pl';
 
 my $self = init();
 lockKml($self);
+
+my $rssFile = $self->{settings}->{rssFeed};
+$rssFile = shift if @ARGV;
 
 my $doc = loadKml($self);
 my @base = $doc->findnodes("/kml/Document/Folder[name='Twitter']");

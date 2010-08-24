@@ -22,4 +22,7 @@ $settings->{dbPass} = "S3cr3t!";
 # Location where photocatalog is hosted.
 $settings->{website} = "@@WEBSITE@@";
 
+# URL for Twitter RSS feed.
+$settings->{rssFeed} = "@@RSSFEED@@";
+
 1;
