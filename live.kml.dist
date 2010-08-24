@@ -1,247 +1,97 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <kml xsi:schemaLocation="http://www.opengis.net/kml/2.2 ogckml22.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.opengis.net/kml/2.2">
   <Document>
-    <name>My Adventurous Life</name>
-    <description>My life is very adventurous!</description>
-    <styleUrl>#check-hide-children</styleUrl>
+    <name>@@TITLE@@</name>
+    <description>@@DESCRIPTION@@</description>
     <Style id="check-hide-children">
-     <ListStyle>
-      <listItemType>checkHideChildren</listItemType>
-     </ListStyle>
+      <ListStyle>
+        <listItemType>checkHideChildren</listItemType>
+      </ListStyle>
     </Style>
     <Style id="line">
-     <LineStyle>
-      <color>8000ffff</color>
-      <width>6</width>
-     </LineStyle>
-     <PolyStyle>
-      <color>60ff0000</color>
-     </PolyStyle>
+      <LineStyle>
+        <color>8000ffff</color>
+        <width>6</width>
+      </LineStyle>
+      <PolyStyle>
+        <color>60ff0000</color>
+      </PolyStyle>
     </Style>
     <Style id="icon">
-     <IconStyle>
-      <Icon>
-       <href>@@WEBSITE@@/icons/trail.png</href>
-      </Icon>
-      <hotSpot x="16" y="16" xunits="pixels" yunits="pixels"/>
-     </IconStyle>
+      <IconStyle>
+        <Icon>
+           <href>@@WEBSITE@@/icons/trail.png</href>
+        </Icon>
+        <hotSpot x="16" y="16" xunits="pixels" yunits="pixels"/>
+      </IconStyle>
     </Style>
-  <Style id="photo">
-   <IconStyle>
-    <Icon>
-     <href>@@WEBSITE@@/icons/camera.png</href>
-    </Icon>
-    <hotSpot x="32" y="17" xunits="pixels" yunits="pixels"/>
-   </IconStyle>
-  </Style>
-  <Style id="text">
-   <IconStyle>
-    <Icon>
-     <href>@@WEBSITE@@/icons/text.png</href>
-    </Icon>
-    <hotSpot x="32" y="32" xunits="pixels" yunits="pixels"/>
-   </IconStyle>
-  </Style>
-  <Style id="twitter">
-   <IconStyle>
-    <Icon>
-     <href>@@WEBSITE@@/icons/twitter.png</href>
-    </Icon>
-    <hotSpot x="32" y="32" xunits="pixels" yunits="pixels"/>
-   </IconStyle>
-  </Style>
-  <Style id="position">
-   <IconStyle>
-    <Icon>
-     <href>@@WEBSITE@@/icons/me.jpg</href>
-    </Icon>
-    <hotSpot x="32" y="30" xunits="pixels" yunits="pixels"/>
-   </IconStyle>
-  </Style>
-  <Style id="style9">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style18">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style10">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style14">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style15">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style21">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style19">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style16">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style8">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style24">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style23">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style4">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style22">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style7">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style6">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style13">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style11">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style20">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style2">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style17">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style12">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Style id="style3">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style5">
-    <LineStyle>
-      <color>73FF0000</color>
-      <width>5</width>
-    </LineStyle>
-  </Style>
-  <Style id="style1">
-    <IconStyle>
-      <Icon>
-        <href>http://maps.gstatic.com/intl/en_us/mapfiles/ms/micons/blue-dot.png</href>
-      </Icon>
-    </IconStyle>
-  </Style>
-  <Placemark><name>My Location</name><styleUrl>#position</styleUrl><Point><coordinates>0.00000,0.00000,0.0</coordinates></Point></Placemark>
-  <Placemark>
-    <name>Path</name>
-    <styleUrl>#line</styleUrl>
-    <LineString>
-      <coordinates></coordinates>
-    </LineString>
-  </Placemark>
-  <Folder>
-    <name>Locations</name>
-    <description>Everywhere I've been</description>
-</Folder>
-  <Folder>
-    <name>Twitter</name>
-    <description>My Tweets!</description>
-</Folder>
-  <Folder>
-    <name>Messages</name>
-    <description>Significant notes</description>
-</Folder>
-  <Folder>
-    <name>Photos</name>
-    <description>Everything I've seen</description>
-</Folder>
-  <Folder>
-    <name>Unsorted Photos</name>
-    <description>Everything I've seen</description>
-</Folder>
-</Document>
+    <Style id="photo">
+      <IconStyle>
+        <Icon>
+          <href>@@WEBSITE@@/icons/camera.png</href>
+        </Icon>
+        <hotSpot x="32" y="17" xunits="pixels" yunits="pixels"/>
+      </IconStyle>
+    </Style>
+    <Style id="text">
+      <IconStyle>
+        <Icon>
+          <href>@@WEBSITE@@/icons/text.png</href>
+        </Icon>
+        <hotSpot x="32" y="32" xunits="pixels" yunits="pixels"/>
+      </IconStyle>
+    </Style>
+    <Style id="twitter">
+      <IconStyle>
+        <Icon>
+          <href>@@WEBSITE@@/icons/twitter.png</href>
+        </Icon>
+        <hotSpot x="32" y="32" xunits="pixels" yunits="pixels"/>
+      </IconStyle>
+    </Style>
+    <Style id="position">
+      <IconStyle>
+        <Icon>
+          <href>@@WEBSITE@@/icons/me.jpg</href>
+        </Icon>
+        <hotSpot x="32" y="30" xunits="pixels" yunits="pixels"/>
+      </IconStyle>
+    </Style>
+    <Placemark>
+      <name>My Location</name>
+      <styleUrl>#position</styleUrl>
+      <Point>
+        <coordinates>0.00000,0.00000,0.0</coordinates>
+      </Point>
+    </Placemark>
+    <Placemark>
+      <name>Path</name>
+      <styleUrl>#line</styleUrl>
+      <LineString>
+	<coordinates>
+	</coordinates>
+      </LineString>
+    </Placemark>
+    <Folder>
+      <name>Locations</name>
+      <description>Everywhere I've been</description>
+      <styleUrl>#check-hide-children</styleUrl>
+    </Folder>
+    <Folder>
+      <name>Twitter</name>
+      <description>My Tweets!</description>
+    </Folder>
+    <Folder>
+      <name>Messages</name>
+      <description>Significant notes</description>
+    </Folder>
+    <Folder>
+      <name>Photos</name>
+      <description>Everything I've seen</description>
+    </Folder>
+    <Folder>
+      <name>Unsorted Photos</name>
+      <description>Everything I've seen</description>
+    </Folder>
+  </Document>
 </kml>

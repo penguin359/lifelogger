@@ -139,6 +139,7 @@ my $title = ask("Title", "My Adventurous Life");
 my $author = ask("Author", "John Doe");
 my $email = ask("E-Mail", "webmaster\@example.org");
 my $website = ask("Website", "http://www.example.org/");
+my $description = ask("Description", "My life is very adventurous!");
 my $apiKey = ask("InstaMapper API Key", "584014439054448247");
 my $cwd = getcwd;
 
@@ -184,6 +185,7 @@ print " Title:                  $title\n";
 print " Author:                 $author\n";
 print " E-Mail:                 $email\n";
 print " Website:                $website\n";
+print " Description:            $description\n";
 print " InstaMapper API Key:    $apiKey\n";
 print " Twitter RSS Feed:       $rssFeed\n";
 print " Photocatalog Directory: $cwd\n";
@@ -211,6 +213,8 @@ sub installFile {
 				$var = $website;
 			} elsif($var eq "EMAIL") {
 				$var = $email;
+			} elsif($var eq "DESCRIPTION") {
+				$var = $description;
 			} elsif($var eq "TITLE") {
 				$var = $title;
 			} elsif($var eq "APIKEY") {
