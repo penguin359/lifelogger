@@ -87,11 +87,11 @@ print "Installing Photocatalog\n";
 print "\n";
 print "Checking dependencies...\n";
 foreach my $lib (
+    "Bundle::LWP",
     "Image::ExifTool",
     "MIME::Tools",
     "XML::DOM",
     "XML::DOM::XPath",
-    "HTTP::Request",
     "XML::RSS",
     "XML::Atom") {
 	if(!eval "require $lib") {
@@ -141,10 +141,55 @@ my $email = ask("E-Mail", "webmaster\@example.org");
 my $website = ask("Website", "http://www.example.org/");
 my $apiKey = ask("InstaMapper API Key", "584014439054448247");
 my $cwd = getcwd;
+
+my $rssFeed;
+eval {
+	require LWP::UserAgent;
+	require HTTP::Request;
+	my $username = ask("Twitter Username", "twitter");
+	my $request = HTTP::Request->new(GET => "http://twitter.com/$username");
+	my $ua = LWP::UserAgent->new;
+	my $response = $ua->request($request);
+	if($response->is_success) {
+		my $html = $response->decoded_content;
+		while(!defined($rssFeed) &&
+		      $html =~ s{<link\s+(?:[^>]*\s+)?href="([^">]*/user_timeline/[^">]*)"(?:\s+[^>]*|/)?>}{}) {
+			my $tag = $&;
+			my $href = $1;
+			#print "Possible: '$tag'\n";
+			$rssFeed = $href
+			    if $tag =~ m{\brel="alternate"} && $tag =~ m{\btype="application/rss\+xml"};
+		}
+		if(!defined($rssFeed)) {
+			print STDERR "  No valid RSS feed found for user $username\n";
+		}
+	} else {
+		print STDERR "  Failed to retrieve user's Twitter feed\n";
+		print STDERR "  User does not exist\n" if $response->code == 404;
+	}
+};
+print STDERR "  Failed to load Bundle::LWP: $@" if $@;
+if(defined($rssFeed)) {
+	print "  Found Twitter RSS feed for user: $rssFeed\n";
+} else {
+	$rssFeed = ask("Twitter RSS Feed", "http://twitter.com/statuses/user_timeline/783214.rss");
+}
 print "\n";
 
 # Support for Windows users
 $cwd =~ s:\\:\\\\:g;
+
+print "Your settings:\n";
+print " Title:                  $title\n";
+print " Author:                 $author\n";
+print " E-Mail:                 $email\n";
+print " Website:                $website\n";
+print " InstaMapper API Key:    $apiKey\n";
+print " Twitter RSS Feed:       $rssFeed\n";
+print " Photocatalog Directory: $cwd\n";
+my $ans = ask("Is this correct", "yes");
+exit 0 if $ans !~ /y(es)?/i;
+print "\n";
 
 sub installFile {
 	my ($file) = @_;
@@ -172,6 +217,8 @@ sub installFile {
 				$var = $apiKey;
 			} elsif($var eq "CWD") {
 				$var = $cwd;
+			} elsif($var eq "RSSFEED") {
+				$var = $rssFeed;
 			} else {
 				die "Unknown variable $var";
 			}
