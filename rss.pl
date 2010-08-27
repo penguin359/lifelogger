@@ -51,7 +51,8 @@ $xc->registerNs('k', "http://www.opengis.net/kml/2.2");
 my @base = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Twitter']");
 open(my $fd, "<", $rssFile) or die "Failed to open RSS for reading";
 binmode $fd;
-my $rssDoc = XML::LibXML->load_xml(IO => $fd);
+my $parser = new XML::LibXML;
+my $rssDoc = $parser->parse_fh($fd);
 close $fd;
 my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 

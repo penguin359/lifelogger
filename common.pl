@@ -289,7 +289,8 @@ sub loadKml {
 	$file = $self->{files}->{kml} if !defined($file);
 	open(my $fd, "<", $file) or die "Failed to open KML for reading";
 	binmode $fd;
-	my $doc = XML::LibXML->load_xml(IO => $fd);
+	my $parser = new XML::LibXML;
+	my $doc = $parser->parse_fh($fd);
 	close $fd;
 
 	return $doc;
