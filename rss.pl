@@ -37,13 +37,13 @@ use open ':utf8', ':std';
 use Encode;
 use Image::ExifTool;
 
-my $rssFile = "twitter.rss";
-$rssFile = shift if @ARGV;
-
 require 'common.pl';
 
 my $self = init();
 lockKml($self);
+
+my $rssFile = $self->{settings}->{rssFeed};
+$rssFile = shift if @ARGV;
 
 my $doc = loadKml($self);
 my $xc = new XML::LibXML::XPathContext $doc;

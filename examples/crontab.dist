@@ -6,16 +6,16 @@ PERL5LIB=@@CWD@@
 0,15,30,45 6-22 * * * updatelocation.pl
 5,10,20,25,35,40,50,55 6-22 * * * updatelocation.pl -n
 
-# These two lines update location data, but only add one point to the
-# path, instead of all points collected from InstaMapper.
+# This updates location data, but only add one point to the path,
+# instead of all points collected from InstaMapper.
 */10 0-5,23 * * * updatelocation.pl -s
 
 # This creates mobile.kml from live.kml which is better designed for
-# Google Maps on cellphones.
+# Google Maps Mobile.
 */10 * * * * mobile.pl
 
-# This pulls in Twitter (or any other RSS feed) and adds it to live.kml
-*/10 * * * * rss.pl http://twitter.com/statuses/user_timeline/783214.rss
+# This pulls in Twitter (or any other RSS feed) and adds it to live.kml.
+*/10 * * * * rss.pl
 
 # This scans the uploads folder for JPEG images and adds them to live.kml.
 */15 * * * * scan.pl

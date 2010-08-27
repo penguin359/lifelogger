@@ -49,6 +49,7 @@ $settings->{dataSource} = "DBI:Pg:dbname=photocatalog;host=localhost";
 $settings->{dbUser} = "user";
 $settings->{dbPass} = "S3cr3t!";
 $settings->{website} = "http://www.example.org/";
+$settings->{rssFeed} = "http://twitter.com/statuses/user_timeline/783214.rss";
 
 require 'settings.pl';
 
