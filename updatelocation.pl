@@ -43,16 +43,21 @@ require 'common.pl';
 
 my $slow = 0;
 my $noMark = 0;
+my $verbose = 0;
 my $result = GetOptions(
 	"slow" => \$slow,
-	"no-mark" => \$noMark);
+	"no-mark" => \$noMark,
+	"Verbose" => \$verbose);
 die "Usage: $0 [-n | -s] [file.csv]" if !$result || @ARGV > 1;
 
 my $self = init();
 lockKml($self);
 
+$self->{verbose} = $verbose;
+
 my $newEntries = [];
 if(defined($ARGV[0])) {
+	print "Loading CSV file.\n" if $self->{verbose};
 	open(my $fd, $ARGV[0]) or die "Can't load file";
 	my @lines = <$fd>;
 	($newEntries) = parseData($self, \@lines);
@@ -62,6 +67,7 @@ if(defined($ARGV[0])) {
 	my $lastTimestamp = lastTimestamp($self, $sources->[0]->{id});
 	$lastTimestamp++;
 
+	print "Downloading InstaMapper data.\n" if $self->{verbose};
 	my $request = HTTP::Request->new(GET => "http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp");
 	my $ua = LWP::UserAgent->new;
 	my $response = $ua->request($request);
@@ -80,8 +86,10 @@ my @locationBase = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Locations'
 
 die "Can't find base for location" if @locationBase != 1;
 
+print "Saving location data.\n" if $self->{verbose};
 appendData($self, $newEntries);
 
+print "Adding placemarks.\n" if $self->{verbose} && @$newEntries && !$noMark;
 my $kmlEntries = [];
 push @$kmlEntries, pop @$newEntries if @$newEntries && !$noMark;
 push @$newEntries, @$kmlEntries;
@@ -97,6 +105,7 @@ foreach my $entry (@$kmlEntries) {
 	addPlacemark($doc, $locationBase[0], $mark);
 }
 
+print "Updating path.\n" if $self->{verbose};
 my $coordStr = "";
 foreach my $entry (@$newEntries) {
 	next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
@@ -105,6 +114,7 @@ foreach my $entry (@$newEntries) {
 my @lineNode = $xc->findnodes('/k:kml/k:Document/k:Placemark/k:LineString/k:coordinates/text()');
 $lineNode[0]->appendData($coordStr);
 
+print "Updating my location.\n" if $self->{verbose};
 my $currentPosition = pop @$newEntries;
 if(defined($currentPosition)) {
 	my $positionNode = ${$xc->findnodes("/k:kml/k:Document/k:Placemark[k:styleUrl='#position']/k:Point/k:coordinates/text()")}[0];
