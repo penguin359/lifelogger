@@ -34,9 +34,6 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-use XML::DOM;
-use XML::DOM::XPath;
-use Data::Dumper;
 
 my $mobileFile = "mobile.kml";
 
@@ -46,10 +43,12 @@ my $self = init();
 lockKml($self);
 
 my $doc = loadKml($self);
-my $base = ${$doc->findnodes("/kml/Document")}[0];
+my $xc = new XML::LibXML::XPathContext $doc;
+$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
+my $base = ${$xc->findnodes("/k:kml/k:Document")}[0];
 
 foreach my $folder ('Twitter', 'Locations', 'Unsorted Photos') {
-	my $node = ${$base->findnodes("Folder[name='$folder']")}[0];
+	my $node = ${$xc->findnodes("k:Folder[k:name='$folder']", $base)}[0];
 	$base->removeChild($node);
 }
 

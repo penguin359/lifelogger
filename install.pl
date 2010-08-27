@@ -91,8 +91,8 @@ foreach my $lib (
     "Image::ExifTool",
     "MIME::Tools",
     "XML::LibXML",
-    "XML::DOM",
-    "XML::DOM::XPath",
+    #"XML::DOM",
+    #"XML::DOM::XPath",
     "HTTP::Request",
     "XML::RSS",
     "XML::Atom") {
@@ -112,14 +112,14 @@ if($@ && $?) {
 	installLib("Image::Resize");
 }
 
-eval {
-	require XML::DOM;
-	$XML::DOM::VERSION =~ /^(\d+)\.(\d+)$/;
-	if($1 < 1 || $1 == 1 && $2 < 44) {
-		print "XML-DOM-$XML::DOM::VERSION is older than 1.44.\n";
-		print "Please upgrade as older versions do not handle UTF-8 well.\n";
-	}
-};
+#eval {
+#	require XML::DOM;
+#	$XML::DOM::VERSION =~ /^(\d+)\.(\d+)$/;
+#	if($1 < 1 || $1 == 1 && $2 < 44) {
+#		print "XML-DOM-$XML::DOM::VERSION is older than 1.44.\n";
+#		print "Please upgrade as older versions do not handle UTF-8 well.\n";
+#	}
+#};
 
 print "\n";
 print <<EOF;

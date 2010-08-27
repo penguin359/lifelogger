@@ -38,6 +38,7 @@ use POSIX qw(strftime);
 use Time::Local;
 use XML::LibXML;
 #use DBI;
+use Data::Dumper;
 
 # Load default settings
 $settings = {};

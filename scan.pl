@@ -36,10 +36,7 @@ use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
 use Time::Local;
-use XML::DOM;
-use XML::DOM::XPath;
 use Image::ExifTool;
-use Data::Dumper;
 
 require 'common.pl';
 
@@ -108,7 +105,9 @@ sub addImage {
 }
 
 my $doc = loadKml($self);
-my @base = $doc->findnodes("/kml/Document/Folder[name='Unsorted Photos']");
+my $xc = new XML::LibXML::XPathContext $doc;
+$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
+my @base = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Unsorted Photos']");
 
 die "Can't find base for unsorted photos" if @base != 1;
 
