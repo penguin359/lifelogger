@@ -283,6 +283,7 @@ sub addAtomEntry {
 sub loadKml {
 	my($self, $file) = @_;
 
+	print "Loading KML file.\n" if $self->{verbose};
 	$file = $self->{files}->{kml} if !defined($file);
 	my $parser = new XML::DOM::Parser;
 	my $doc = $parser->parsefile($file);
@@ -293,6 +294,7 @@ sub loadKml {
 sub saveKml {
 	my($self, $doc, $file) = @_;
 
+	print "Saving KML file.\n" if $self->{verbose};
 	$file = $self->{files}->{kml} if !defined($file);
 	#print $doc->toString;
 	open(my $fd, ">", $file) or die "Failed to open KML for writing";
@@ -304,9 +306,11 @@ sub lockKml {
 	my($self) = @_;
 
 	return if exists($self->{lockFd});
+	print "Waiting for lock...\n" if $self->{verbose};
 	open(my $fd, '>>', $self->{files}->{lock}) or die "Can't open lock file";
 	flock($fd, LOCK_EX) or die "Can't establish file lock";
 	$self->{lockFd} = $fd;
+	print "Locked.\n" if $self->{verbose};
 }
 
 sub insertDB {
