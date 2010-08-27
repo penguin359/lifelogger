@@ -36,13 +36,10 @@ use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
 use Time::Local;
-use XML::DOM;
-use XML::DOM::XPath;
 use MIME::Parser;
 use MIME::WordDecoder;
 use Image::ExifTool;
 use Encode;
-use Data::Dumper;
 
 require 'common.pl';
 
@@ -153,9 +150,11 @@ sub myFromRaw {
 }
 
 my $doc = loadKml($self);
-#my @base = $doc->findnodes('/kml/Document');
-my @messageBase = $doc->findnodes("/kml/Document/Folder[name='Messages']");
-my @photoBase = $doc->findnodes("/kml/Document/Folder[name='Photos']");
+my $xc = new XML::LibXML::XPathContext $doc;
+$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
+#my @base = $xc->findnodes('/k:kml/k:Document');
+my @messageBase = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Messages']");
+my @photoBase = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Photos']");
 
 die "Can't find base for photos" if @photoBase != 1;
 die "Can't find base for messages" if @messageBase != 1;

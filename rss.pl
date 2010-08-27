@@ -35,8 +35,6 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use Encode;
-use XML::DOM;
-use XML::DOM::XPath;
 use Image::ExifTool;
 
 my $rssFile = "twitter.rss";
@@ -48,23 +46,27 @@ my $self = init();
 lockKml($self);
 
 my $doc = loadKml($self);
-my @base = $doc->findnodes("/kml/Document/Folder[name='Twitter']");
-my $parser = new XML::DOM::Parser;
-my $rssDoc = $parser->parsefile($rssFile);
-my @items = $rssDoc->findnodes('/rss/channel/item');
+my $xc = new XML::LibXML::XPathContext $doc;
+$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
+my @base = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Twitter']");
+open(my $fd, "<", $rssFile) or die "Failed to open RSS for reading";
+binmode $fd;
+my $rssDoc = XML::LibXML->load_xml(IO => $fd);
+close $fd;
+my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 
 die "Can't find base for twitter" if @base != 1;
 
 #print "List:\n";
 foreach my $item (@items) {
-	my $title     = ${$item->findnodes('title/text()')}[0]->getNodeValue();
-	my $descr     = ${$item->findnodes('description/text()')}[0]->getNodeValue();
-	my $pubDate   = ${$item->findnodes('pubDate/text()')}[0]->getNodeValue();
-	my $guid      = ${$item->findnodes('guid/text()')}[0]->getNodeValue();
-	my $link      = ${$item->findnodes('link/text()')}[0]->getNodeValue();
+	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->data;
+	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->data;
+	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->data;
+	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->data;
+	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->data;
 	my $timestamp = parseDate($pubDate);
 
-	my @guidMatches = $doc->findnodes("/kml/Document/Folder/Placemark/ExtendedData/Data[\@name='guid']/value[text()='$guid']/text()");
+	my @guidMatches = $xc->findnodes("/k:kml/k:Document/k:Folder/k:Placemark/k:ExtendedData/k:Data[\@name='guid']/k:value[text()='$guid']/text()");
 	if(@guidMatches) {
 		die "Duplicate GUIDs" if @guidMatches > 1;
 		#my $kmlGuid = $guidMatches[0]->getNodeValue;
