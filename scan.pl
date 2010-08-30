@@ -39,7 +39,6 @@ use Time::Local;
 use XML::DOM;
 use XML::DOM::XPath;
 use Image::ExifTool;
-use Data::Dumper;
 
 require 'common.pl';
 
@@ -47,9 +46,8 @@ my $verbose = 0;
 my $result = GetOptions("Verbose" => \$verbose);
 
 my $self = init();
-lockKml($self);
-
 $self->{verbose} = $verbose;
+lockKml($self);
 
 sub addImage {
 	my($path, $self, $doc, $base) = @_;

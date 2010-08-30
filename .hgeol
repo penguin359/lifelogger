@@ -1,0 +1,7 @@
+[patterns]
+**.pl = native
+AUTHORS = native
+INSTALL = native
+LICENSE = native
+README = native
+TODO = native
