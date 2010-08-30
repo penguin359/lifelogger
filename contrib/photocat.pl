@@ -63,36 +63,35 @@ foreach my $file (@ARGV) {
 	my $data = `$jhead '$file'`;
 	$data=~/Date\/Time\s*:\s*(\d{4}):(\d{1,2}):(\d{1,2})\s+(\d{1,2}):(\d{1,2}):(\d{1,2})/;
 	my ($year, $month, $day, $hour, $minute, $second) = ($1, $2, $3, $4, $5, $6);
-	$data=~/Camera\s+model\s*:\s*([^\n]+)/;
-	my $model = $1;
+	#$data=~/Camera\s+model\s*:\s*([^\n]+)/;
+	#my $model = $1;
 
-	$model =~ s/$_//gi foreach qw(digital camera kodak canon olympus zoom);
-	$model =~ s/^\s+|\s+$//g;
+	#$model =~ s/$_//gi foreach qw(digital camera kodak canon olympus zoom);
+	#$model =~ s/^\s+|\s+$//g;
 
 
-	if($logging) {
-		print "Yes log.\n";
-		$logfile = sprintf("%s/%s/%s", $year, $fancy_month[$month], "output.log");
-	}
+	my $dir = $year;
+	mkdir $dir if ! -d $dir;
+	$dir .= "/$fancy_month[$month]";
+	mkdir $dir if ! -d $dir;
+
+	if($logging)
+		$logfile =  "$dir/output.log";
+
+	$dir .= "/$day";
+	mkdir $dir if ! -d $dir;
 
 	if($recompress) {
-		print "Yes recompress.\n";
 		my $oSize = -s $file;
 
 		print "Optimizing photo (this is a lossless transform)...";
-		system("$jhead -c -dt -autorot '$file' 1>> $logfile 2>&1 &&
-		$jhead -c -cmd '\'$jpegtran\' -progressive -o &i > &o' '$file' 1>> $logfile 2>&1");
+		system("$jhead -c -dt -autorot '$file' >> $logfile 2>&1 &&
+		$jhead -c -cmd '\'$jpegtran\' -progressive -o &i > &o' '$file' >> $logfile 2>&1");
 		my $percent = sprintf ("%.2f", 100 - (-s $file)/$oSize*100);
 		printf "%s is %.2f%% smaller, done.\n",$file,$percent;
 	}
 
 	print "Sorting photo...";
-	my $dir = sprintf("%s/%s/%s/%s", $year, $fancy_month[$month], $day);
-	if ( ! -e $dir ) {
-		system("mkdir", "-p", $dir);
-		my $timestamp = timelocal(0, 0, 0, $day, $month-1, $year);
-		utime($timestamp, $timestamp, $dir);
-	}
 
 	my $newfile=sprintf('%s/Photo_%02i%02i', $dir, $hour, $minute);
 	if ( -e "$newfile.$ext" ) {
