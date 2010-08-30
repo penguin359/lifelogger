@@ -53,6 +53,7 @@ my $rssFile = "log.gpx";
 $rssFile = shift if @ARGV;
 
 my $self = init();
+$self->{verbose} = $verbose;
 lockKml($self);
 
 my $parser = new XML::DOM::Parser;

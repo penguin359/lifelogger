@@ -54,9 +54,8 @@ my $fileSize = -s $file;
 my $utcTime = 0;
 
 my $self = init();
-lockKml($self);
-
 $self->{verbose} = $verbose;
+lockKml($self);
 
 my $exif = new Image::ExifTool;
 $exif->Options({PrintConv => 0});

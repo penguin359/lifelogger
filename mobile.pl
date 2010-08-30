@@ -34,15 +34,19 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use Getopt::Long;
 use XML::DOM;
 use XML::DOM::XPath;
-use Data::Dumper;
-
-my $mobileFile = "mobile.kml";
 
 require 'common.pl';
 
+my $verbose = 0;
+my $result = GetOptions("Verbose" => \$verbose);
+
+my $mobileFile = "mobile.kml";
+
 my $self = init();
+$self->{verbose} = $verbose;
 lockKml($self);
 
 my $doc = loadKml($self);

@@ -50,9 +50,8 @@ my $verbose = 0;
 my $result = GetOptions("Verbose" => \$verbose);
 
 my $self = init();
-lockKml($self);
-
 $self->{verbose} = $verbose;
+lockKml($self);
 
 my $descrText = "";
 
