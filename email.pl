@@ -150,11 +150,10 @@ sub myFromRaw {
 }
 
 my $doc = loadKml($self);
-my $xc = new XML::LibXML::XPathContext $doc;
-$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
-#my @base = $xc->findnodes('/k:kml/k:Document');
-my @messageBase = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Messages']");
-my @photoBase = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Photos']");
+my $xc = loadXPath($self);
+#my @base = $xc->findnodes('/kml:kml/kml:Document', $doc);
+my @messageBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Messages']", $doc);
+my @photoBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Photos']", $doc);
 
 die "Can't find base for photos" if @photoBase != 1;
 die "Can't find base for messages" if @messageBase != 1;

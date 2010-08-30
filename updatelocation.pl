@@ -80,9 +80,8 @@ if(defined($ARGV[0])) {
 }
 
 my $doc = loadKml($self);
-my $xc = new XML::LibXML::XPathContext $doc;
-$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
-my @locationBase = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Locations']");
+my $xc = loadXPath($self);
+my @locationBase = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Locations']", $doc);
 
 die "Can't find base for location" if @locationBase != 1;
 
@@ -111,13 +110,13 @@ foreach my $entry (@$newEntries) {
 	next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
 	$coordStr .= "\n$entry->{longitude},$entry->{latitude},$entry->{altitude}";
 }
-my @lineNode = $xc->findnodes('/k:kml/k:Document/k:Placemark/k:LineString/k:coordinates/text()');
+my @lineNode = $xc->findnodes('/k:kml/k:Document/k:Placemark/k:LineString/k:coordinates/text()', $doc);
 $lineNode[0]->appendData($coordStr);
 
 print "Updating my location.\n" if $self->{verbose};
 my $currentPosition = pop @$newEntries;
 if(defined($currentPosition)) {
-	my $positionNode = ${$xc->findnodes("/k:kml/k:Document/k:Placemark[k:styleUrl='#position']/k:Point/k:coordinates/text()")}[0];
+	my $positionNode = ${$xc->findnodes("/k:kml/k:Document/k:Placemark[k:styleUrl='#position']/k:Point/k:coordinates/text()", $doc)}[0];
 	$positionNode->setData("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
 }
 

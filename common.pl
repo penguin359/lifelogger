@@ -318,6 +318,18 @@ sub lockKml {
 	print "Locked.\n" if $self->{verbose};
 }
 
+sub loadXPath {
+	my($self) = @_;
+
+	return $self->{xc} if exists($self->{xc});
+	my $xc = new XML::LibXML::XPathContext;
+	$xc->registerNs('kml', "http://www.opengis.net/kml/2.2");
+	$xc->registerNs('gpx', "http://www.topografix.com/GPX/1/1");
+	$self->{xc} = $xc;
+
+	return $xc;
+}
+
 sub insertDB {
 	my($self) = @_;
 

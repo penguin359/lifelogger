@@ -46,9 +46,8 @@ my $rssFile = $self->{settings}->{rssFeed};
 $rssFile = shift if @ARGV;
 
 my $doc = loadKml($self);
-my $xc = new XML::LibXML::XPathContext $doc;
-$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
-my @base = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Twitter']");
+my $xc = loadXPath($self);
+my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Twitter']", $doc);
 open(my $fd, "<", $rssFile) or die "Failed to open RSS for reading";
 binmode $fd;
 my $parser = new XML::LibXML;
@@ -60,14 +59,14 @@ die "Can't find base for twitter" if @base != 1;
 
 #print "List:\n";
 foreach my $item (@items) {
-	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->data;
-	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->data;
-	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->data;
-	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->data;
-	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->data;
+	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->nodeValue;
+	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->nodeValue;
+	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->nodeValue;
+	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->nodeValue;
+	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->nodeValue;
 	my $timestamp = parseDate($pubDate);
 
-	my @guidMatches = $xc->findnodes("/k:kml/k:Document/k:Folder/k:Placemark/k:ExtendedData/k:Data[\@name='guid']/k:value[text()='$guid']/text()");
+	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $doc);
 	if(@guidMatches) {
 		die "Duplicate GUIDs" if @guidMatches > 1;
 		#my $kmlGuid = $guidMatches[0]->getNodeValue;

@@ -43,12 +43,11 @@ my $self = init();
 lockKml($self);
 
 my $doc = loadKml($self);
-my $xc = new XML::LibXML::XPathContext $doc;
-$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
-my $base = ${$xc->findnodes("/k:kml/k:Document")}[0];
+my $xc = loadXPath($self);
+my $base = ${$xc->findnodes("/kml:kml/kml:Document", $doc)}[0];
 
 foreach my $folder ('Twitter', 'Locations', 'Unsorted Photos') {
-	my $node = ${$xc->findnodes("k:Folder[k:name='$folder']", $base)}[0];
+	my $node = ${$xc->findnodes("kml:Folder[kml:name='$folder']", $base)}[0];
 	$base->removeChild($node);
 }
 

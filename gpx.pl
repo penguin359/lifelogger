@@ -35,8 +35,6 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
-use XML::DOM;
-use XML::DOM::XPath;
 
 require 'common.pl';
 
@@ -55,9 +53,13 @@ $rssFile = shift if @ARGV;
 my $self = init();
 lockKml($self);
 
-my $parser = new XML::DOM::Parser;
-my $rssDoc = $parser->parsefile($rssFile);
-my @items = $rssDoc->findnodes('/gpx/trk/trkseg/trkpt');
+open(my $fd, "<", $rssFile) or die "Failed to open KML for reading";
+binmode $fd;
+my $parser = new XML::LibXML;
+my $rssDoc = $parser->parse_fh($fd);
+close $fd;
+my $xc = loadXPath($self);
+my @items = $xc->findnodes('/gpx:gpx/gpx:trk/gpx:trkseg/gpx:trkpt', $rssDoc);
 
 print "List:\n";
 my $entries = [];
@@ -65,12 +67,12 @@ foreach my $item (@items) {
 	my $entry = {};
 	$entry->{key}       = $source;
 	$entry->{label}     = $name;
-	$entry->{latitude}  = ${$item->findnodes('@lat')}[0]->getNodeValue();
-	$entry->{longitude} = ${$item->findnodes('@lon')}[0]->getNodeValue();
-	$entry->{altitude}  = ${$item->findnodes('ele/text()')}[0]->getNodeValue();
-	$entry->{speed}     = ${$item->findnodes('extensions/speed/text()')}[0]->getNodeValue();
+	$entry->{latitude}  = ${$xc->findnodes('@lat', $item)}[0]->nodeValue;
+	$entry->{longitude} = ${$xc->findnodes('@lon', $item)}[0]->nodeValue;
+	$entry->{altitude}  = ${$xc->findnodes('gpx:ele/text()', $item)}[0]->nodeValue;
+	$entry->{speed}     = ${$xc->findnodes('gpx:extensions/gpx:speed/text()', $item)}[0]->nodeValue;
 	$entry->{heading}   = "";
-	my $time            = ${$item->findnodes('time/text()')}[0]->getNodeValue();
+	my $time            = ${$xc->findnodes('gpx:time/text()', $item)}[0]->nodeValue;
 	$entry->{timestamp} = parseIsoTime($self, $time);
 	#$entry->{timestamp} = 0;
 

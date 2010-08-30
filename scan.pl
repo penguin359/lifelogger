@@ -105,9 +105,8 @@ sub addImage {
 }
 
 my $doc = loadKml($self);
-my $xc = new XML::LibXML::XPathContext $doc;
-$xc->registerNs('k', "http://www.opengis.net/kml/2.2");
-my @base = $xc->findnodes("/k:kml/k:Document/k:Folder[k:name='Unsorted Photos']");
+my $xc = loadXPath($self);
+my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Unsorted Photos']", $doc);
 
 die "Can't find base for unsorted photos" if @base != 1;
 
