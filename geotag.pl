@@ -66,10 +66,6 @@ my $timestamp = 0;
 if(exists $info->{DateTimeOriginal}) {
 	$timestamp = parseExifDate($info->{DateTimeOriginal});
 
-#Goal below is to set GPSTimeStamp to UTC time on line 112;
-	$utcTime = $hour = $tzoffset.":".$min.":".$sec;
-
-}
 if($timestamp <= 981119752) {
 	die "Image timestamp is out of bounds!"
 }
