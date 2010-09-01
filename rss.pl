@@ -45,14 +45,49 @@ lockKml($self);
 my $rssFile = $self->{settings}->{rssFeed};
 $rssFile = shift if @ARGV;
 
+# This is a wrapper for LibXML allowing it to pull from URLs as well as
+# from files.  This was shamelessly stolen from XML::DOM.
+sub loadXML {
+	my($url) = @_;
+	my $parser = new XML::LibXML;
+
+	# Any other URL schemes?
+	if($url =~ /^(https?|ftp|wais|gopher|file):/) {
+		# Read the file from the web with LWP.
+		#
+		# Note that we read in the entire file, which may not be ideal
+		# for large files. LWP::UserAgent also provides a callback style
+		# request, which we could convert to a stream with a fork()...
+
+		my $result;
+		eval {
+			use LWP::UserAgent;
+
+			my $ua = LWP::UserAgent->new;
+
+			# Load proxy settings from environment variables, i.e.:
+			# http_proxy, ftp_proxy, no_proxy etc. (see LWP::UserAgent(3))
+			# You need these to go thru firewalls.
+			$ua->env_proxy;
+			my $req = new HTTP::Request 'GET', $url;
+			my $response = $ua->request($req);
+
+			# Parse the result of the HTTP request
+			$result = $parser->parse_string($response->content);
+		};
+		if($@) {
+			die "Couldn't parsefile [$url] with LWP: $@";
+		}
+		return $result;
+	} else {
+		return $parser->parse_file($url);
+	}
+}
+
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
 my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Twitter']", $doc);
-open(my $fd, "<", $rssFile) or die "Failed to open RSS for reading";
-binmode $fd;
-my $parser = new XML::LibXML;
-my $rssDoc = $parser->parse_fh($fd);
-close $fd;
+my $rssDoc = loadXML($rssFile);
 my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 
 die "Can't find base for twitter" if @base != 1;
