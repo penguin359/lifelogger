@@ -35,8 +35,6 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use Encode;
-use XML::DOM;
-use XML::DOM::XPath;
 use Image::ExifTool;
 
 my $rssFile = "twitter.rss";
@@ -48,23 +46,24 @@ my $self = init();
 lockKml($self);
 
 my $doc = loadKml($self);
-my @base = $doc->findnodes("/kml/Document/Folder[name='Twitter']");
-my $parser = new XML::DOM::Parser;
-my $rssDoc = $parser->parsefile($rssFile);
-my @items = $rssDoc->findnodes('/rss/channel/item');
+my $xc = loadXPath($self);
+my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Twitter']", $doc);
+my $parser = new XML::LibXML;
+my $rssDoc = $parser->parse_file($rssFile);
+my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 
 die "Can't find base for twitter" if @base != 1;
 
 #print "List:\n";
 foreach my $item (@items) {
-	my $title     = ${$item->findnodes('title/text()')}[0]->getNodeValue();
-	my $descr     = ${$item->findnodes('description/text()')}[0]->getNodeValue();
-	my $pubDate   = ${$item->findnodes('pubDate/text()')}[0]->getNodeValue();
-	my $guid      = ${$item->findnodes('guid/text()')}[0]->getNodeValue();
-	my $link      = ${$item->findnodes('link/text()')}[0]->getNodeValue();
+	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->nodeValue;
+	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->nodeValue;
+	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->nodeValue;
+	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->nodeValue;
+	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->nodeValue;
 	my $timestamp = parseDate($pubDate);
 
-	my @guidMatches = $doc->findnodes("/kml/Document/Folder/Placemark/ExtendedData/Data[\@name='guid']/value[text()='$guid']/text()");
+	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $doc);
 	if(@guidMatches) {
 		die "Duplicate GUIDs" if @guidMatches > 1;
 		#my $kmlGuid = $guidMatches[0]->getNodeValue;
