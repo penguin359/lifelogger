@@ -47,9 +47,8 @@ my $verbose = 0;
 my $result = GetOptions("Verbose" => \$verbose);
 
 my $self = init();
-lockKml($self);
-
 $self->{verbose} = $verbose;
+lockKml($self);
 
 my $descrText = "";
 
@@ -107,15 +106,18 @@ sub scanEntity {
 		}
 		#print "$longitude,$latitude\n";
 
+		my $title = $self->{subject};
+		my $descr = $descrText;
+		my $html = "<p><b>$title</b></p><p>$descr</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>";
 		my $mark = createPlacemark($doc);
-		addName($doc, $mark, $self->{subject});
-		addDescription($doc, $mark, "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-		addRssEntry($self, $self->{rssFeed}, $self->{subject}, "$website/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-		addAtomEntry($self, $self->{atomFeed}, $self->{subject}, "$website/images/$filename", "<p><b>$self->{subject}</b></p><p>$descrText</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-		addTimestamp($doc, $mark, $timestamp);
+		addName($doc, $mark, $title);
+		addDescription($doc, $mark, $html);
 		addStyle($doc, $mark, 'photo');
+		addTimestamp($doc, $mark, $timestamp);
 		addPoint($doc, $mark, $latitude, $longitude);
 		addPlacemark($doc, $base, $mark);
+		addRssEntry($self, $self->{rssFeed}, $title, "$website/images/$filename", $html);
+		addAtomEntry($self, $self->{atomFeed}, $title, "$website/images/$filename", $html);
 	} elsif($entity->head->mime_type eq "text/plain") {
 		print "Found text\n" if $self->{verbose};
 		#$entity->bodyhandle->print(\*STDOUT);
@@ -151,12 +153,14 @@ sub myFromRaw {
 
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-#my @base = $xc->findnodes('/kml:kml/kml:Document', $doc);
 my @messageBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Messages']", $doc);
 my @photoBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Photos']", $doc);
 
 die "Can't find base for photos" if @photoBase != 1;
 die "Can't find base for messages" if @messageBase != 1;
+
+my $messageBase = $messageBase[0];
+my $photoBase = $photoBase[0];
 
 my $tmp = "/tmp";
 $tmp = $ENV{TEMP} if defined $ENV{TEMP};
@@ -179,7 +183,6 @@ if(defined $ARGV[0]) {
 
 my $subject = $entity->head->get('Subject');
 chomp($subject);
-#print "S: '", $subject, "'\n";
 $self->{subject} = $subject;
 
 
@@ -187,20 +190,23 @@ $self->{rssFeed} = loadRssFeed($self);
 $self->{atomFeed} = loadAtomFeed($self);
 $self->{date} = parseDate($entity->head->get('Date'));
 $self->{matched} = 0;
-#exit 0;
-scanEntity($entity, $self, $doc, $photoBase[0]);
+scanEntity($entity, $self, $doc, $photoBase);
 if(!$self->{matched}) {
+	my $title = $self->{subject};
+	my $descr = $descrText;
+	my $html = "<p><b>$title</b></p><p>$descr</p>";
 	my $mark = createPlacemark($doc);
 	my $entry = closestEntry($self, $self->{date});
-	addName($doc, $mark, $self->{subject});
-	addDescription($doc, $mark, "<p><b>$self->{subject}</b></p><p>$descrText</p>");
+	addName($doc, $mark, $title);
+	addDescription($doc, $mark, $html);
 	addStyle($doc, $mark, 'text');
+	addTimestamp($doc, $mark, $self->{date});
 	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
-	addPlacemark($doc, $messageBase[0], $mark);
+	addPlacemark($doc, $messageBase, $mark);
 	my $uuid = `uuidgen`;
 	chomp($uuid);
-	addRssEntry($self, $self->{rssFeed}, $self->{subject}, "urn:uuid:$uuid", "<p><b>$self->{subject}</b></p><p>$descrText</p>");
-	addAtomEntry($self, $self->{atomFeed}, $self->{subject}, "urn:uuid:$uuid", "<p><b>$self->{subject}</b></p><p>$descrText</p>");
+	addRssEntry($self, $self->{rssFeed}, $title, "urn:uuid:$uuid", $html);
+	addAtomEntry($self, $self->{atomFeed}, $title, "urn:uuid:$uuid", $html);
 }
 saveKml($self, $doc);
 saveRssFeed($self, $self->{rssFeed});

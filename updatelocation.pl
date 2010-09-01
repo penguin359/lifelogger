@@ -51,9 +51,8 @@ my $result = GetOptions(
 die "Usage: $0 [-n | -s] [file.csv]" if !$result || @ARGV > 1;
 
 my $self = init();
-lockKml($self);
-
 $self->{verbose} = $verbose;
+lockKml($self);
 
 my $newEntries = [];
 if(defined($ARGV[0])) {

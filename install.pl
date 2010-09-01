@@ -46,6 +46,8 @@ if(defined($ARGV[0])) {
 	}
 }
 
+die "Please run installer.pl from top-level of checkout" if ! -f 'settings.pl.dist';
+
 sub ask {
 	my ($prompt, $default) = @_;
 
@@ -56,8 +58,6 @@ sub ask {
 	$answer = $default if $answer eq "";
 	return $answer;
 }
-
-die "Please run installer.pl from top-level of checkout" if ! -f 'settings.pl.dist';
 
 my $activePerl = 0;
 my $autoinstall = '?';
@@ -167,9 +167,6 @@ if(defined($rssFeed)) {
 }
 print "\n";
 
-# Support for Windows users
-$cwd =~ s:\\:\\\\:g;
-
 print "Your settings:\n";
 print " Title:                  $title\n";
 print " Author:                 $author\n";
@@ -182,6 +179,9 @@ print " Photocatalog Directory: $cwd\n";
 my $ans = ask("Is this correct", "yes");
 exit 0 if $ans !~ /y(es)?/i;
 print "\n";
+
+# Support for Windows users
+$cwd =~ s:\\:\\\\:g;
 
 sub installFile {
 	my ($file) = @_;

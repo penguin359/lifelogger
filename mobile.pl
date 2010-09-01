@@ -34,12 +34,17 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
-
-my $mobileFile = "mobile.kml";
+use Getopt::Long;
 
 require 'common.pl';
 
+my $verbose = 0;
+my $result = GetOptions("Verbose" => \$verbose);
+
+my $mobileFile = "mobile.kml";
+
 my $self = init();
+$self->{verbose} = $verbose;
 lockKml($self);
 
 my $doc = loadKml($self);

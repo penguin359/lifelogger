@@ -35,11 +35,16 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use Encode;
+use Getopt::Long;
 use Image::ExifTool;
 
 require 'common.pl';
 
+my $verbose = 0;
+my $result = GetOptions("Verbose" => \$verbose);
+
 my $self = init();
+$self->{verbose} = $verbose;
 lockKml($self);
 
 my $rssFile = $self->{settings}->{rssFeed};

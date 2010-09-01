@@ -32,20 +32,38 @@ use 5.008;
 use warnings;
 use strict;
 
-use utf8;
-use open ':utf8', ':std';
+use bytes;
+#use utf8;
+#use open ':utf8', ':std';
+use CGI qw(:standard);
 use Getopt::Long;
 use Time::Local;
+use XML::DOM;
+use XML::DOM::XPath;
 use Image::ExifTool;
+
+binmode STDIN;
+print "Content-type: text/plain\r\n\r\n";
+#system('env');
+
 
 require 'common.pl';
 
-my $verbose = 0;
-my $result = GetOptions("Verbose" => \$verbose);
-
 my $self = init();
-$self->{verbose} = $verbose;
+$self->{verbose} = 1;
 lockKml($self);
+
+my $doc = loadKml($self);
+my @base = $doc->findnodes("/kml/Document/Folder[name='Unsorted Photos']");
+
+print "Checking for base...\n";
+die "Can't find base for unsorted photos" if @base != 1;
+print "Found.\n";
+
+$self->{rssFeed} = loadRssFeed($self);
+$self->{atomFeed} = loadAtomFeed($self);
+
+print "Feeds loaded.\n";
 
 sub addImage {
 	my($path, $self, $doc, $base) = @_;
@@ -92,33 +110,55 @@ sub addImage {
 	}
 	#print "$longitude,$latitude\n";
 
+	my $title = param('title');
+	my $descr = param('description');
 	my $mark = createPlacemark($doc);
-	addName($doc, $mark, $filename);
-	addDescription($doc, $mark, "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addRssEntry($self, $self->{rssFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addAtomEntry($self, $self->{atomFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+	addName($doc, $mark, $title);
+	addDescription($doc, $mark, "<p><b>$title</b></p><p>$descr</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+	addRssEntry($self, $self->{rssFeed}, $title, "$website/images/$filename", "<p><b>$title</b></p><p>$descr</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
+	addAtomEntry($self, $self->{atomFeed}, $title, "$website/images/$filename", "<p><b>$title</b></p><p>$descr</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, 'photo');
 	addPoint($doc, $mark, $latitude, $longitude);
 	addPlacemark($doc, $base, $mark);
 }
 
-my $doc = loadKml($self);
-my $xc = loadXPath($self);
-my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Unsorted Photos']", $doc);
 
-die "Can't find base for unsorted photos" if @base != 1;
-
-
-$self->{rssFeed} = loadRssFeed($self);
-$self->{atomFeed} = loadAtomFeed($self);
-if(!@ARGV) {
-	addImage($_, $self, $doc, $base[0])
-	    foreach glob "$self->{settings}->{cwd}/uploads/*.[jJ][pP][gG] uploads/*.[jJ][pP][eE][gG]";
-} else {
-	addImage($_, $self, $doc, $base[0])
-	    foreach @ARGV;
+print "Checking form.\n";
+binmode \*STDIN;
+binmode \*STDIN, ":bytes";
+#die "Aaaaaaaaaaaaaaaaaaaaaaaah!!!";
+foreach('file', 'description', 'title') {
+	print "$_: '" . param($_) . "'\n";
 }
+if(param()) {
+	print "Form\n";
+}
+if(defined(upload('file'))) {
+	my $readFd = upload('file');
+	my $imageFile = "$self->{settings}->{cwd}/tmp/" . param('file');
+	my $imageFile2 = "$self->{settings}->{cwd}/images/" . param('file');
+	if(-e $imageFile2) {
+		print "Duplicate file exists";
+		exit 0;
+	}
+	open my $writeFd, ">:bytes", $imageFile or die "Can't write";
+	binmode $writeFd;
+	while(<$readFd>) {
+		print $writeFd $_;
+	}
+	close $writeFd;
+	print "File: '" . $imageFile . "'\n";
+	addImage($imageFile, $self, $doc, $base[0]);
+	my $fd = upload('file');
+	#while(<$fd>) {
+	#	print "$_";
+	#}
+}
+
+#exit 0;
+
+
 saveKml($self, $doc);
 saveRssFeed($self, $self->{rssFeed});
 saveAtomFeed($self, $self->{atomFeed});

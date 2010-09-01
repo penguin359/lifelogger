@@ -38,11 +38,15 @@ use Getopt::Long;
 
 require 'common.pl';
 
+
+my $verbose = 0;
 my $diff = 300;
 my $result = GetOptions(
-	"diff=i" => \$diff);
+	"diff=i" => \$diff,
+	"Verbose" => \$verbose);
 
 my $self = init();
+$self->{verbose} = $verbose;
 lockKml($self);
 
 my $entries = loadData($self);
