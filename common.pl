@@ -36,7 +36,9 @@ use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl ':flock';
 use POSIX qw(strftime);
 use Time::Local;
+use XML::LibXML;
 #use DBI;
+use Data::Dumper;
 
 # Load default settings
 $settings = {};
@@ -285,8 +287,11 @@ sub loadKml {
 
 	print "Loading KML file.\n" if $self->{verbose};
 	$file = $self->{files}->{kml} if !defined($file);
-	my $parser = new XML::DOM::Parser;
-	my $doc = $parser->parsefile($file);
+	open(my $fd, "<", $file) or die "Failed to open KML for reading";
+	binmode $fd;
+	my $parser = new XML::LibXML;
+	my $doc = $parser->parse_fh($fd);
+	close $fd;
 
 	return $doc;
 }
@@ -296,10 +301,10 @@ sub saveKml {
 
 	print "Saving KML file.\n" if $self->{verbose};
 	$file = $self->{files}->{kml} if !defined($file);
-	#print $doc->toString;
 	open(my $fd, ">", $file) or die "Failed to open KML for writing";
-	$doc->printToFileHandle($fd);
-	#$doc->printToFile($file);
+	binmode $fd;
+	$doc->toFH($fd);
+	close $fd;
 }
 
 sub lockKml {
@@ -311,6 +316,18 @@ sub lockKml {
 	flock($fd, LOCK_EX) or die "Can't establish file lock";
 	$self->{lockFd} = $fd;
 	print "Locked.\n" if $self->{verbose};
+}
+
+sub loadXPath {
+	my($self) = @_;
+
+	return $self->{xc} if exists($self->{xc});
+	my $xc = new XML::LibXML::XPathContext;
+	$xc->registerNs('kml', "http://www.opengis.net/kml/2.2");
+	$xc->registerNs('gpx', "http://www.topografix.com/GPX/1/1");
+	$self->{xc} = $xc;
+
+	return $xc;
 }
 
 sub insertDB {

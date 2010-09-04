@@ -35,9 +35,8 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
-use XML::DOM;
-use XML::DOM::XPath;
 use HTTP::Request;
+use LWP::UserAgent;
 use Data::Dumper;
 
 require 'common.pl';
@@ -80,7 +79,8 @@ if(defined($ARGV[0])) {
 }
 
 my $doc = loadKml($self);
-my @locationBase = $doc->findnodes("/kml/Document/Folder[name='Locations']");
+my $xc = loadXPath($self);
+my @locationBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Locations']", $doc);
 
 die "Can't find base for location" if @locationBase != 1;
 
@@ -109,14 +109,14 @@ foreach my $entry (@$newEntries) {
 	next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
 	$coordStr .= "\n$entry->{longitude},$entry->{latitude},$entry->{altitude}";
 }
-my @lineNode = $doc->findnodes('/kml/Document/Placemark/LineString/coordinates');
-$lineNode[0]->addText($coordStr);
+my @lineNode = $xc->findnodes('/kml:kml/kml:Document/kml:Placemark/kml:LineString/kml:coordinates/text()', $doc);
+$lineNode[0]->appendData($coordStr);
 
 print "Updating my location.\n" if $self->{verbose};
 my $currentPosition = pop @$newEntries;
 if(defined($currentPosition)) {
-	my $positionNode = ${$doc->findnodes("/kml/Document/Placemark[styleUrl='#position']/Point/coordinates/text()")}[0];
-	$positionNode->setNodeValue("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
+	my $positionNode = ${$xc->findnodes("/kml:kml/kml:Document/kml:Placemark[kml:styleUrl='#position']/kml:Point/kml:coordinates/text()", $doc)}[0];
+	$positionNode->setData("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
 }
 
 saveKml($self, $doc);

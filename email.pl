@@ -36,13 +36,10 @@ use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
 use Time::Local;
-use XML::DOM;
-use XML::DOM::XPath;
 use MIME::Parser;
 use MIME::WordDecoder;
 use Image::ExifTool;
 use Encode;
-use Data::Dumper;
 
 require 'common.pl';
 
@@ -155,8 +152,9 @@ sub myFromRaw {
 }
 
 my $doc = loadKml($self);
-my @messageBase = $doc->findnodes("/kml/Document/Folder[name='Messages']");
-my @photoBase = $doc->findnodes("/kml/Document/Folder[name='Photos']");
+my $xc = loadXPath($self);
+my @messageBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Messages']", $doc);
+my @photoBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Photos']", $doc);
 
 die "Can't find base for photos" if @photoBase != 1;
 die "Can't find base for messages" if @messageBase != 1;

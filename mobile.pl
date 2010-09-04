@@ -35,8 +35,6 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
-use XML::DOM;
-use XML::DOM::XPath;
 
 require 'common.pl';
 
@@ -50,10 +48,11 @@ $self->{verbose} = $verbose;
 lockKml($self);
 
 my $doc = loadKml($self);
-my $base = ${$doc->findnodes("/kml/Document")}[0];
+my $xc = loadXPath($self);
+my $base = ${$xc->findnodes("/kml:kml/kml:Document", $doc)}[0];
 
 foreach my $folder ('Twitter', 'Locations', 'Unsorted Photos') {
-	my $node = ${$base->findnodes("Folder[name='$folder']")}[0];
+	my $node = ${$xc->findnodes("kml:Folder[kml:name='$folder']", $base)}[0];
 	$base->removeChild($node);
 }
 

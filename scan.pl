@@ -36,8 +36,6 @@ use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
 use Time::Local;
-use XML::DOM;
-use XML::DOM::XPath;
 use Image::ExifTool;
 
 require 'common.pl';
@@ -106,7 +104,8 @@ sub addImage {
 }
 
 my $doc = loadKml($self);
-my @base = $doc->findnodes("/kml/Document/Folder[name='Unsorted Photos']");
+my $xc = loadXPath($self);
+my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Unsorted Photos']", $doc);
 
 die "Can't find base for unsorted photos" if @base != 1;
 

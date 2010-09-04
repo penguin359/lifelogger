@@ -90,8 +90,7 @@ foreach my $lib (
     "Bundle::LWP",
     "Image::ExifTool",
     "MIME::Tools",
-    "XML::DOM",
-    "XML::DOM::XPath",
+    "XML::LibXML",
     "XML::RSS",
     "XML::Atom") {
 	if(!eval "require $lib") {
@@ -109,15 +108,6 @@ if($@ && $?) {
 	print STDERR "Either Image::Resize needs to be installed or ImageMagick must be in the PATH\n";
 	installLib("Image::Resize");
 }
-
-eval {
-	require XML::DOM;
-	$XML::DOM::VERSION =~ /^(\d+)\.(\d+)$/;
-	if($1 < 1 || $1 == 1 && $2 < 44) {
-		print "XML-DOM-$XML::DOM::VERSION is older than 1.44.\n";
-		print "Please upgrade as older versions do not handle UTF-8 well.\n";
-	}
-};
 
 print "\n";
 print <<EOF;

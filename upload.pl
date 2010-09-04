@@ -38,8 +38,6 @@ use bytes;
 use CGI qw(:standard);
 use Getopt::Long;
 use Time::Local;
-use XML::DOM;
-use XML::DOM::XPath;
 use Image::ExifTool;
 
 binmode STDIN;
@@ -54,7 +52,8 @@ $self->{verbose} = 1;
 lockKml($self);
 
 my $doc = loadKml($self);
-my @base = $doc->findnodes("/kml/Document/Folder[name='Unsorted Photos']");
+my $xc = loadXPath($self);
+my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Unsorted Photos']", $doc);
 
 print "Checking for base...\n";
 die "Can't find base for unsorted photos" if @base != 1;
