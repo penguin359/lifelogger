@@ -37,7 +37,80 @@ use open ':utf8', ':std';
 my $dataFile = "$settings->{cwd}/location.csv";
 my $timestampFile = "$settings->{cwd}/timestamp";
 
-sub parseData {
+sub parseDataPC {
+	my($self, $lines) = @_;
+
+	die "Missing header" if @$lines < 2;
+	my $version = shift @$lines;
+	chomp($version);
+	die "Unreconized format or version" if $version ne "PhotoCatalog v1.0";
+
+	my $header = shift @$lines;
+	chomp($header);
+	my @fields = split /,/, $header;
+	my %fields;
+	for(my $i = 0; $i < @fields; $i++) {
+		$fields{$fields[$i]} = $i;
+	}
+
+	my @required = ('timestamp', 'latitude', 'longitude');
+	foreach(@required) {
+		die "Missing required field $_" if !defined($fields{$_});
+	}
+	push @required, 'id' if defined($fields{id});
+
+	#print Dumper(\%fields, \@required);
+	my $line = 3;
+	my $lastTimestamp = 0;
+	my $entries = [];
+	line: foreach(@$lines) {
+		chomp;
+		my @cells = split /,/;
+		my $entry = {};
+		foreach(keys %fields) {
+			$entry->{$_} = $cells[$fields{$_}]
+			    if(defined($cells[$fields{$_}]) &&
+			       $cells[$fields{$_}] ne "");
+		}
+		$entry->{id} = $line if !defined($fields{id});
+		$line++;
+
+		foreach(@required) {
+			if(!defined($entry->{$_})) {
+				warn "Missing field $_ on line ", $line-1, "\n";
+				next line;
+			}
+		}
+		if($entry->{id} !~ /^\s*\d+\s*$/) {
+			warn "Bad id on line ", $line-1, "\n";
+			next;
+		}
+		if($entry->{timestamp} !~ /^\s*\d+\s*$/) {
+			warn "Bad timestamp on line ", $line-1, "\n";
+			next;
+		}
+		if($entry->{latitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
+		   $entry->{latitude} < -90 || $entry->{latitude} > 90) {
+			warn "Bad latitude on line ", $line-1, "\n";
+			next;
+		}
+		if($entry->{longitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
+		   $entry->{longitude} < -180 || $entry->{longitude} > 180) {
+			warn "Bad longitude on line ", $line-1, "\n";
+			next;
+		}
+
+		$lastTimestamp = $entry->{timestamp}
+		    if $lastTimestamp < $entry->{timestamp};
+		push @$entries, $entry;
+	}
+	#print Dumper($entries);
+	#exit 0;
+
+	return ($entries, $lastTimestamp);
+}
+
+sub parseDataIM {
 	my($self, $lines) = @_;
 
 	die "Missing header" if @$lines < 1;
@@ -60,6 +133,20 @@ sub parseData {
 	}
 
 	return ($entries, $lastTimestamp);
+}
+
+sub parseData {
+	my($self, $lines) = @_;
+
+	die "Missing header" if @$lines < 1;
+	my $version = @$lines[0];
+	if($version =~ "InstaMapper API") {
+		return parseDataIM($self, $lines);
+	} elsif($version =~ "PhotoCatalog") {
+		return parseDataPC($self, $lines);
+	} else {
+		die "Unrecognized file";
+	}
 }
 
 sub updateLastTimestamp {
