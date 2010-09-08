@@ -32,12 +32,13 @@ use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use Fcntl qw(:seek);
 
 
 my $dataFile = "$settings->{cwd}/location.csv";
 my $timestampFile = "$settings->{cwd}/timestamp";
 
-sub parseDataPC {
+sub parseDataHeaderPC {
 	my($self, $lines) = @_;
 
 	die "Missing header" if @$lines < 2;
@@ -59,7 +60,15 @@ sub parseDataPC {
 	}
 	push @required, 'id' if defined($fields{id});
 
-	#print Dumper(\%fields, \@required);
+	return(\@fields, \%fields, \@required);
+}
+
+sub parseDataPC {
+	my($self, $lines) = @_;
+
+	my(undef, $fields, $required) = parseDataHeaderPC($self, $lines);
+
+	#print Dumper($fields, $required);
 	my $line = 3;
 	my $lastTimestamp = 0;
 	my $entries = [];
@@ -67,15 +76,15 @@ sub parseDataPC {
 		chomp;
 		my @cells = split /,/;
 		my $entry = {};
-		foreach(keys %fields) {
-			$entry->{$_} = $cells[$fields{$_}]
-			    if(defined($cells[$fields{$_}]) &&
-			       $cells[$fields{$_}] ne "");
+		foreach(keys %$fields) {
+			$entry->{$_} = $cells[$fields->{$_}]
+			    if(defined($cells[$fields->{$_}]) &&
+			       $cells[$fields->{$_}] ne "");
 		}
-		$entry->{id} = $line if !defined($fields{id});
+		$entry->{id} = $line if !defined($fields->{id});
 		$line++;
 
-		foreach(@required) {
+		foreach(@$required) {
 			if(!defined($entry->{$_})) {
 				warn "Missing field $_ on line ", $line-1, "\n";
 				next line;
@@ -206,6 +215,39 @@ sub writeData {
 	close $fd;
 
 	updateLastTimestamp($self, $lastTimestamp);
+}
+
+sub appendDataPC {
+	my($self, $entries) = @_;
+
+	open(my $fd, "+<", $dataFile) or die "Can't append PhotoCatalog updates";
+
+	# Grab first two lines of file and parse
+	my @lines = ();
+	push @lines, $_ if defined($_ = <$fd>);
+	push @lines, $_ if defined($_ = <$fd>);
+	my($fields, undef, $required) = parseDataHeaderPC($self, \@lines);
+	seek $fd, 0, SEEK_END;
+
+	my $lastTimestamp = lastTimestamp($self);
+	foreach my $entry (@$entries) {
+		my $line = "";
+		my $first = 1;
+		foreach(@$fields) {
+			$line .= "," if !$first;
+			$line .= $entry->{$_} if defined($entry->{$_});
+			$first = 0;
+		}
+		$line .= "\n";
+		$lastTimestamp = $entry->{timestamp}
+		    if defined($entry->{timestamp}) &&
+		       $lastTimestamp < $entry->{timestamp};
+		print $fd $line;
+	}
+
+	close $fd;
+
+	#updateLastTimestamp($self, $lastTimestamp);
 }
 
 sub appendData {
