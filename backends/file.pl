@@ -250,22 +250,41 @@ sub appendDataPC {
 	#updateLastTimestamp($self, $lastTimestamp);
 }
 
-sub appendData {
+sub appendDataIM {
 	my($self, $entries) = @_;
 
-	my $str = "";
+	open(my $fd, "+<", $dataFile) or die "Can't append InstaMapper updates";
+	seek $fd, 0, SEEK_END;
+
 	my $lastTimestamp = lastTimestamp($self);
 	foreach my $entry (@$entries) {
-		$str .= "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
+		print $fd "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
 		$lastTimestamp = $entry->{timestamp}
-		    if $lastTimestamp < $entry->{timestamp};
+		    if defined($entry->{timestamp}) &&
+		       $lastTimestamp < $entry->{timestamp};
 	}
 
-	open(my $fd, ">>$dataFile") or die "Can't append InstaMapper updates";
-	print $fd $str;
 	close $fd;
 
 	updateLastTimestamp($self, $lastTimestamp);
+}
+
+sub appendData {
+	my($self, $entries) = @_;
+
+	open(my $fd, "<", $dataFile) or die "Can't append updates";
+
+	my $version = <$fd>;
+	close $fd;
+
+	die "Missing header for updates" if !defined($version);
+	if($version =~ "InstaMapper API") {
+		return appendDataIM($self, $entries);
+	} elsif($version =~ "PhotoCatalog") {
+		return appendDataPC($self, $entries);
+	} else {
+		die "Unrecognized file for updates";
+	}
 }
 
 sub loadData {

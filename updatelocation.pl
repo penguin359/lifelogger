@@ -70,12 +70,21 @@ if(defined($ARGV[0])) {
 	my $request = HTTP::Request->new(GET => "http://www.instamapper.com/api?action=getPositions&key=$apiKey&num=100&from_ts=$lastTimestamp");
 	my $ua = LWP::UserAgent->new;
 	my $response = $ua->request($request);
-	if($response->is_success) {
-		my @lines = split /\n/, $response->decoded_content;
-		($newEntries) = parseData($self, \@lines);
-	} else {
-		print STDERR $response->status_line, "\n";
-	}
+	die $response->status_line, "\n"
+	    if !$response->is_success;
+	my @lines = split /\n/, $response->decoded_content;
+	($newEntries) = parseData($self, \@lines);
+}
+
+my $seg = 1;
+my $lastTimestamp = lastTimestamp($self);
+my $diff = 300;
+foreach(@$newEntries) {
+	next if !defined($_->{timestamp});
+	$seg++ if abs($_->{timestamp} - $lastTimestamp) > $diff;
+	$_->{track} = 1;
+	$_->{seg} = $seg;
+	$lastTimestamp = $_->{timestamp};
 }
 
 my $doc = loadKml($self);
