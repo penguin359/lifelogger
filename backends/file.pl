@@ -38,6 +38,31 @@ use Fcntl qw(:seek);
 my $dataFile = "$settings->{cwd}/location.csv";
 my $timestampFile = "$settings->{cwd}/timestamp";
 
+sub parseDataIM {
+	my($self, $lines) = @_;
+
+	die "Missing header" if @$lines < 1;
+	my $version = shift @$lines;
+	chomp($version);
+	die "Unreconized format or version" if $version ne "InstaMapper API v1.00";
+
+	my $lastTimestamp = 0;
+	my $entries = [];
+	foreach(@$lines) {
+		chomp;
+		next if $_ !~ /^[[:digit:]]+,([^,]*,){6}/;
+		my $entry = {};
+		($entry->{key},      $entry->{label},     $entry->{timestamp},
+		 $entry->{latitude}, $entry->{longitude}, $entry->{altitude},
+		 $entry->{speed},    $entry->{heading})   = split /,/, $_, 8;
+		$lastTimestamp = $entry->{timestamp}
+		    if $lastTimestamp < $entry->{timestamp};
+		push @$entries, $entry;
+	}
+
+	return ($entries, $lastTimestamp);
+}
+
 sub parseDataHeaderPC {
 	my($self, $lines) = @_;
 
@@ -119,31 +144,6 @@ sub parseDataPC {
 	return ($entries, $lastTimestamp);
 }
 
-sub parseDataIM {
-	my($self, $lines) = @_;
-
-	die "Missing header" if @$lines < 1;
-	my $version = shift @$lines;
-	chomp($version);
-	die "Unreconized format or version" if $version ne "InstaMapper API v1.00";
-
-	my $lastTimestamp = 0;
-	my $entries = [];
-	foreach(@$lines) {
-		chomp;
-		next if $_ !~ /^[[:digit:]]+,([^,]*,){6}/;
-		my $entry = {};
-		($entry->{key},      $entry->{label},     $entry->{timestamp},
-		 $entry->{latitude}, $entry->{longitude}, $entry->{altitude},
-		 $entry->{speed},    $entry->{heading})   = split /,/, $_, 8;
-		$lastTimestamp = $entry->{timestamp}
-		    if $lastTimestamp < $entry->{timestamp};
-		push @$entries, $entry;
-	}
-
-	return ($entries, $lastTimestamp);
-}
-
 sub parseData {
 	my($self, $lines) = @_;
 
@@ -186,50 +186,31 @@ sub lastTimestamp {
 	return $self->{lastTimestamp};
 }
 
-sub writeDataFile {
-	my($self, $entries, $file) = @_;
+my $fieldsIM = [
+    "key",
+    "label",
+    "timestamp",
+    "latitude",
+    "longitude",
+    "altitude",
+    "speed",
+    "heading"];
 
-	my $str = "InstaMapper API v1.00\n";
-	foreach my $entry (@$entries) {
-		$str .= "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
-	}
+my $fieldsPC = [
+    "key",
+    "id",
+    "seg",
+    "track",
+    "timestamp",
+    "latitude",
+    "longitude",
+    "altitude",
+    "speed",
+    "heading"];
 
-	open(my $fd, ">$file") or die "Can't Write InstaMapper updates";
-	print $fd $str;
-	close $fd;
-}
+sub writeEntries {
+	my($self, $fd, $entries, $fields, $lastTimestamp) = @_;
 
-sub writeData {
-	my($self, $entries) = @_;
-
-	my $str = "InstaMapper API v1.00\n";
-	my $lastTimestamp = lastTimestamp($self);
-	foreach my $entry (@$entries) {
-		$str .= "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
-		$lastTimestamp = $entry->{timestamp}
-		    if $lastTimestamp < $entry->{timestamp};
-	}
-
-	open(my $fd, ">$dataFile") or die "Can't Write InstaMapper updates";
-	print $fd $str;
-	close $fd;
-
-	updateLastTimestamp($self, $lastTimestamp);
-}
-
-sub appendDataPC {
-	my($self, $entries) = @_;
-
-	open(my $fd, "+<", $dataFile) or die "Can't append PhotoCatalog updates";
-
-	# Grab first two lines of file and parse
-	my @lines = ();
-	push @lines, $_ if defined($_ = <$fd>);
-	push @lines, $_ if defined($_ = <$fd>);
-	my($fields, undef, $required) = parseDataHeaderPC($self, \@lines);
-	seek $fd, 0, SEEK_END;
-
-	my $lastTimestamp = lastTimestamp($self);
 	foreach my $entry (@$entries) {
 		my $line = "";
 		my $first = 1;
@@ -240,39 +221,106 @@ sub appendDataPC {
 		}
 		$line .= "\n";
 		$lastTimestamp = $entry->{timestamp}
-		    if defined($entry->{timestamp}) &&
+		    if defined($lastTimestamp) &&
+		       defined($entry->{timestamp}) &&
 		       $lastTimestamp < $entry->{timestamp};
 		print $fd $line;
 	}
 
+	return $lastTimestamp;
+}
+
+sub writeDataIM {
+	my($self, $entries, $file) = @_;
+
+	my $update = 1;
+	if(!defined($file)) {
+		$file = $dataFile;
+		$update = 0;
+	}
+	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
+
+	print $fd "InstaMapper API v1.00\n";
+	my $lastTimestamp = lastTimestamp($self);
+	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsIM, $lastTimestamp);
 	close $fd;
 
-	#updateLastTimestamp($self, $lastTimestamp);
+	updateLastTimestamp($self, $lastTimestamp) if $update;
+}
+
+sub writeDataPC {
+	my($self, $entries, $file) = @_;
+
+	my $update = 1;
+	if(!defined($file)) {
+		$file = $dataFile;
+		$update = 0;
+	}
+	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
+
+	my $header = "";
+	my $first = 1;
+	foreach(@$fieldsPC) {
+		$header .= "," if !$first;
+		$header .= $_;
+		$first = 0;
+	}
+	$header .= "\n";
+	print $fd "PhotoCatalog v1.0\n";
+	print $fd $header;
+	my $lastTimestamp = lastTimestamp($self);
+	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsPC, $lastTimestamp);
+	close $fd;
+
+	updateLastTimestamp($self, $lastTimestamp) if $update;
 }
 
 sub appendDataIM {
-	my($self, $entries) = @_;
+	my($self, $entries, $file) = @_;
 
-	open(my $fd, "+<", $dataFile) or die "Can't append InstaMapper updates";
+	my $update = 1;
+	if(!defined($file)) {
+		$file = $dataFile;
+		$update = 0;
+	}
+	open(my $fd, ">>", $file) or die "Can't append InstaMapper updates";
+
+	my $lastTimestamp = lastTimestamp($self);
+	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsIM, $lastTimestamp);
+	close $fd;
+
+	updateLastTimestamp($self, $lastTimestamp) if $update;
+}
+
+sub appendDataPC {
+	my($self, $entries, $file) = @_;
+
+	my $update = 1;
+	if(!defined($file)) {
+		$file = $dataFile;
+		$update = 0;
+	}
+	open(my $fd, "+<", $file) or die "Can't append PhotoCatalog updates";
+
+	# Grab first two lines of file and parse
+	my @lines = ();
+	push @lines, $_ if defined($_ = <$fd>);
+	push @lines, $_ if defined($_ = <$fd>);
+	my($fields, undef, $required) = parseDataHeaderPC($self, \@lines);
 	seek $fd, 0, SEEK_END;
 
 	my $lastTimestamp = lastTimestamp($self);
-	foreach my $entry (@$entries) {
-		print $fd "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
-		$lastTimestamp = $entry->{timestamp}
-		    if defined($entry->{timestamp}) &&
-		       $lastTimestamp < $entry->{timestamp};
-	}
-
+	$lastTimestamp = writeEntries($self, $fd, $entries, $fields, $lastTimestamp);
 	close $fd;
 
-	updateLastTimestamp($self, $lastTimestamp);
+	updateLastTimestamp($self, $lastTimestamp) if $update;
 }
 
 sub appendData {
-	my($self, $entries) = @_;
+	my($self, $entries, $file) = @_;
 
-	open(my $fd, "<", $dataFile) or die "Can't append updates";
+	$file = $dataFile if !defined($file);
+	open(my $fd, "<", $file) or die "Can't append updates";
 
 	my $version = <$fd>;
 	close $fd;

@@ -41,46 +41,68 @@ require 'common.pl';
 my $name = "GPX Data";
 my $source = 0;
 my $verbose = 0;
-my $out = "gps-out.gpx";
+my $out = "gps-log.csv";
 my $result = GetOptions("name=s" => \$name,
 	   "source=i" => \$source,
 	   "Verbose" => \$verbose,
 	   "out=s" => \$out);
 
-my $rssFile = "log.gpx";
-$rssFile = shift if @ARGV;
+my $gpxFile = "gps-log.gpx";
+$gpxFile = shift if @ARGV;
 
 my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
-open(my $fd, "<", $rssFile) or die "Failed to open KML for reading";
-binmode $fd;
-my $parser = new XML::LibXML;
-my $rssDoc = $parser->parse_fh($fd);
-close $fd;
-my $xc = loadXPath($self);
-my @items = $xc->findnodes('/gpx:gpx/gpx:trk/gpx:trkseg/gpx:trkpt', $rssDoc);
+sub checkNode {
+	my($xc, $xpath, $point) = @_;
 
-print "List:\n";
-my $entries = [];
-foreach my $item (@items) {
-	my $entry = {};
-	$entry->{key}       = $source;
-	$entry->{label}     = $name;
-	$entry->{latitude}  = ${$xc->findnodes('@lat', $item)}[0]->nodeValue;
-	$entry->{longitude} = ${$xc->findnodes('@lon', $item)}[0]->nodeValue;
-	$entry->{altitude}  = ${$xc->findnodes('gpx:ele/text()', $item)}[0]->nodeValue;
-	$entry->{speed}     = ${$xc->findnodes('gpx:extensions/gpx:speed/text()', $item)}[0]->nodeValue;
-	$entry->{heading}   = "";
-	my $time            = ${$xc->findnodes('gpx:time/text()', $item)}[0]->nodeValue;
-	$entry->{timestamp} = parseIsoTime($self, $time);
-	#$entry->{timestamp} = 0;
-
-	#print "[UTF8] " if utf8::is_utf8($descr);
-	#print "[VALID] " if utf8::valid($descr);
-	#print "I: '", $latitude, "' - $longitude - $timestamp\n";
-	push @$entries, $entry;
+	my @nodes = $xc->findnodes($xpath, $point);
+	return "" if @nodes < 1;
+	return $nodes[0]->nodeValue;
 }
 
-writeDataFile($self, $entries, $out);
+my $parser = new XML::LibXML;
+my $gpxDoc = $parser->parse_file($gpxFile);
+my $xc = loadXPath($self);
+
+my $entries = [];
+my $id = 1;
+my $seg = 1;
+my $track = 1;
+my @tracks = $xc->findnodes('/gpx:gpx/gpx:trk', $gpxDoc);
+foreach(@tracks) {
+	my @segs = $xc->findnodes('gpx:trkseg', $_);
+	foreach(@segs) {
+		my @points = $xc->findnodes('gpx:trkpt', $_);
+		foreach(@points) {
+			my $entry = {};
+			$entry->{id}        = $id;
+			$entry->{seg}       = $seg;
+			$entry->{track}     = $track;
+			$entry->{key}       = $source;
+			$entry->{label}     = $name;
+			$entry->{latitude}  = checkNode($xc, '@lat', $_);
+			$entry->{longitude} = checkNode($xc, '@lon', $_);
+			$entry->{altitude}  = checkNode($xc, 'gpx:ele/text()', $_);
+			$entry->{speed}     = checkNode($xc, 'gpx:extensions/gpx:speed/text()', $_);
+			$entry->{heading}   = checkNode($xc, 'gpx:extensions/gpx:heading/text()', $_);
+			my $time            = checkNode($xc, 'gpx:time/text()', $_);
+			$entry->{timestamp} = parseIsoTime($self, $time);
+
+			if($entry->{latitude} eq "" ||
+			   $entry->{longitude} eq "" ||
+			   $entry->{timestamp} == 0) {
+				warn "Missing required attributes, skipping";
+				next;
+			}
+
+			push @$entries, $entry;
+			$id++;
+		}
+		$seg++;
+	}
+	$track++;
+}
+
+writeDataPC($self, $entries, $out);
