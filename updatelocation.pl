@@ -81,6 +81,7 @@ my $lastTimestamp = lastTimestamp($self);
 my $diff = 300;
 foreach(@$newEntries) {
 	next if !defined($_->{timestamp});
+	next if defined($_->{track});
 	$seg++ if abs($_->{timestamp} - $lastTimestamp) > $diff;
 	$_->{track} = 1;
 	$_->{seg} = $seg;
@@ -129,6 +130,3 @@ if(defined($currentPosition)) {
 }
 
 saveKml($self, $doc);
-
-#openDB($self);
-#insertDB($self);

@@ -351,6 +351,16 @@ sub init {
 	$self->{files} = $files;
 	$self->{sources} = $sources;
 
+	$self->{sourcesId} = {};
+	foreach(@$sources) {
+		next if !defined($_->{id});
+		if(defined($self->{sourcesId}->{$_->{id}})) {
+			warn "Duplicate source id";
+			next;
+		}
+		$self->{sourcesId}->{$_->{id}} = $_;
+	}
+
 	chdir $settings->{cwd};
 	umask 0022;
 
@@ -446,5 +456,14 @@ sub createThumbnails {
 		createThumbnailsIM($self, $file, $path, $name, ("32", "160"));
 	}
 }
+
+#sub findPath {
+#	my($path) = @_;
+#
+#	my $base = "/kml:kml/kml:Document/";
+#	my @elements = split /\//, $path;
+#	foreach(@elements) {
+#	}
+#}
 
 1;
