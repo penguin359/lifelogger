@@ -37,6 +37,7 @@ use open ':utf8', ':std';
 use Getopt::Long;
 use Time::Local;
 use Image::ExifTool;
+use File::Temp qw(tempfile);
 use Data::Dumper;
 
 require 'common.pl';
@@ -48,7 +49,7 @@ if(!defined($ARGV[0])) {
 	die "Usage: $0 image.jpg";
 }
 my $file = $ARGV[0];
-my $fileSize = -s $file; 
+my $fileSize = -s $file;
 my $utcTime = 0;
 
 my $self = init();
@@ -56,9 +57,8 @@ $self->{verbose} = $verbose;
 lockKml($self);
 
 my $exif = new Image::ExifTool;
-$exif->Options({PrintConv => 0});
+$exif->Options(Binary => 1, CoordFormat => q{%.6f}, PrintConv => 0);
 my $info = $exif->ImageInfo($file);
-#$exif->ExtractInfo($file);
 my $timestamp = 0;
 if(exists $info->{DateTimeOriginal}) {
 	$timestamp = parseExifDate($info->{DateTimeOriginal});
@@ -86,49 +86,37 @@ if ($latitude < 0) {
 }
 
 my $altitude = $entry->{altitude};
-my $altitudeRef = "Above Sea Level";
+my $altitudeRef = 0;
 if ($altitude < 0) {
 	$altitude *= -1;
-	$altitudeRef = "Below Sea Level";
+	$altitudeRef = 1;
 }
 
 #Remove Thumbnail:
 $exif->SetNewValue('IFD1:*');
 
-#Mangle Photo using jpegtran:
-#system("jpegtran", "-optimize", "-progressive", "-copy", "all", "-v", $file);
+my @rotate = ( undef,
+	       "",
+	       "-flip horizontal",
+	       "-rotate 180",
+	       "-flip vertical",
+	       "-transpose",
+	       "-rotate 90",
+	       "-transverse",
+	       "-rotate 270" );
 
-#print $info->{'Orientation'};
-print $exif->GetValue('Orientation');
-#Rotate image to match sensor data & reset EXIF rotation option:
-#Obviously rewrite in perl, we can't do a system(); on an entire script!  (;
-#	for i
-#	do
-#	 case `$exif->GetValue('Orientation')` in
-#	 1) transform="";;
-#	 2) transform="-flip horizontal";;
-#	 3) transform="-rotate 180";;
-#	 4) transform="-flip vertical";;
-#	 5) transform="-transpose";;
-#	 6) transform="-rotate 90";;
-#	 7) transform="-transverse";;
-#	 8) transform="-rotate 270";;
-#	 *) transform="";;
-#	 esac
-#	 if test -n "$transform"; then
-#	  echo Executing: jpegtran -copy all $transform $i
-#	  jpegtran -copy all $transform "$i" > tempfile
-#	  if test $? -ne 0; then
-#	   echo Error while transforming $i - skipped.
-#	  else
-#	   rm "$i"
-#	   mv tempfile "$i"
-##	   $exif->SetNewValue('Orientation',"1");
-#	   $exif->SetNewValue('Orientation#' => 1);
-#	  fi
-#	 fi
-#	done
-	
+my $orientation = $exif->GetValue('Orientation');
+my $rotate = $rotate[$orientation] if defined($orientation);
+if(!defined($rotate)) {
+	warn "Orientation not recognized.\n";
+	$rotate = "";
+}
+my($fh, $tempFile) = tempfile;
+close $fh;
+system("jpegtran", "-optimize", "-progressive", $rotate, "-trim", "-copy", "comments", "-outfile", $tempFile, $file) == 0
+    or die "Failed to process image '$file'";
+$exif->SetNewValue('Orientation', 1)
+    if($rotate ne "");
 
 #Set GeoTagged EXIF data:
 $exif->SetNewValue('UserComment', 'Original Filename: '.$file.', Original Filesize: '.$fileSize.'.');
@@ -142,7 +130,13 @@ $exif->SetNewValue('GPSAltitudeRef', $altitudeRef);
 $exif->SetNewValue('GPSAltitude', $altitude);
 #$exif->SetNewValue('GPSTimeStamp', $utcTime);
 
-my $success = $exif->WriteInfo($file);
+if($exif->WriteInfo($tempFile)) {
+	unlink($file);
+	rename($tempFile, $file);
+} else {
+	warn "Failed to save Exif data";
+	unlink($tempFile);
+}
 $info = $exif->ImageInfo($file);
 print "New UserComment: $info->{UserComment}\n" if exists($info->{UserComment});;
 print "New Copyright: $info->{Copyright}\n" if exists($info->{Copyright});;
@@ -151,9 +145,9 @@ print "New GPSLongitude: $info->{GPSLongitude}\n" if exists($info->{GPSLongitude
 print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
 print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
 
-
 exit 0;
-	
+
+
 print "GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});
 print "GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});
 print "GPSAreaInformation: $info->{GPSAreaInformation}\n" if exists($info->{GPSAreaInformation});
