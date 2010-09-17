@@ -61,9 +61,18 @@ if(defined($ARGV[0])) {
 	my @lines = <$fd>;
 	($newEntries) = parseData($self, \@lines);
 } else {
-	my $sources = $self->{sources};
-	my $apiKey = $sources->[0]->{apiKey};
-	my $lastTimestamp = lastTimestamp($self, $sources->[0]->{id});
+	my $source;
+	foreach(@{$self->{sources}}) {
+		if(lc $_->{type} eq "instamapper") {
+			$source = $_;
+			last;
+		}
+	}
+	die "No InstaMapper source has been configured.\n"
+	    if !defined($source);
+	my $apiKey = $source->{apiKey};
+	my $last = lastTimestamp($self, $source->{id});
+	my $lastTimestamp = $last->{timestamp};
 	$lastTimestamp++;
 
 	print "Downloading InstaMapper data.\n" if $self->{verbose};

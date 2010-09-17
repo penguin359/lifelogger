@@ -195,13 +195,17 @@ sub updateLastTimestamp {
 sub lastTimestamp {
 	my($self, $id) = @_;
 
+	my $hash = 1;
 	if(!defined($id)) {
+		$hash = 0;
 		return $self->{lastTimestamp}
 		    if exists($self->{lastTimestamp});
 		$id = $self->{sources}->[0]->{id} if !defined($id);
 	}
 	my $sourcesId = $self->{sourcesId};
 	die "Unknown source" if !defined($sourcesId->{$id});
+	return $sourcesId->{$id}->{last}
+	    if $hash && exists($sourcesId->{$id}->{last}->{timestamp});
 	return $sourcesId->{$id}->{last}->{timestamp}
 	    if exists($sourcesId->{$id}->{last}->{timestamp});
 	if(open(my $fd, "<", $timestampFile)) {
@@ -214,6 +218,8 @@ sub lastTimestamp {
 				$sourcesId->{$_->{source}}->{last} = $_
 				    if defined($sourcesId->{$_->{source}});
 			}
+			return $sourcesId->{$id}->{last}
+			    if $hash && exists($sourcesId->{$id}->{last}->{timestamp});
 			return $sourcesId->{$id}->{last}->{timestamp}
 			    if exists($sourcesId->{$id}->{last}->{timestamp});
 		} elsif(@lines == 1) {
@@ -221,12 +227,30 @@ sub lastTimestamp {
 			chomp $timestamp;
 			if($timestamp =~ /^\d+$/) {
 				$self->{lastTimestamp} = $timestamp;
+				if($hash) {
+					return {
+						source => 0,
+						timestamp => $self->{lastTimestamp},
+						id => 0,
+						seg => 0,
+						track => 0
+					};
+				}
 				return $self->{lastTimestamp};
 			}
 		}
 	}
 	readData($self);
 	updateLastTimestamp($self, $self->{lastTimestampData});
+	if($hash) {
+		return {
+			source => 0,
+			timestamp => $self->{lastTimestamp},
+			id => 0,
+			seg => 0,
+			track => 0
+		};
+	}
 	return $self->{lastTimestamp};
 }
 
