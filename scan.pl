@@ -47,21 +47,15 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
-sub addImage {
+sub addImageScan {
 	my($path, $self, $doc, $base) = @_;
-
-	my $website = $self->{settings}->{website};
 
 	return if ! -f $path || ! -s $path;
 	print "Processing $path\n" if $self->{verbose};
-	my $exif = new Image::ExifTool;
-	open(my $fd, '<:bytes', $path) or die "Can't open file $path";
-	binmode($fd);
-	my $info = $exif->ImageInfo($fd);
-	close $fd;
 	my $filename = $path;
 	$filename =~ s:.*/::;
 	$filename =~ s:\.[jJ][pP][eE]?[gG]$:.jpg:;
+
 	print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
 	rename($path, "images/$filename") or die "Failed rename(): $!";
 	createThumbnails($self, "images/$filename");
@@ -71,35 +65,62 @@ sub addImage {
 
 	my $timestamp = $mtime;
 	die "Failed to stat $path: $!" if(!defined($timestamp) || $timestamp == 0);
+
+	my $title = $filename;
+	$title =~ s/\.jpg$//;
+	addImage($filename, $self, $doc, $base, $title);
+}
+
+sub addImage {
+	my($filename, $self, $doc, $base, $title, $description) = @_;
+
+	my $path = "images/$filename";
+	my $exif = new Image::ExifTool;
+	open(my $fd, '<:bytes', $path) or die "Can't open file $path";
+	binmode($fd);
+	my $info = $exif->ImageInfo($fd);
+	close $fd;
+
+	my $website = $self->{settings}->{website};
+
+	my $timestamp;
 	if(exists $info->{DateTimeOriginal}) {
 		$timestamp = parseExifDate($info->{DateTimeOriginal});
 	}
 	my $latitude;
 	my $longitude;
 	my $altitude;
-	if(exists $info->{GPSPosition}) {
-		$info->{GPSPosition} =~ /(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([NS]),\s*(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([EW])/;
-		#print "Loc: $1° $2' $3\" $4, $5° $6' $7\" $8\n";
-		$latitude = $1 + ($2 + $3/60)/60;
-		$latitude *= -1 if $4 eq "S";
-		$longitude = $5 + ($6 + $7/60)/60;
-		$longitude *= -1 if $8 eq "W";
-	} else {
-		my $entry = closestEntry($self, $timestamp);
-		$latitude = $entry->{latitude};
-		$longitude = $entry->{longitude};
-		$altitude = $entry->{altitude};
+	if(!exists $info->{GPSPosition}) {
+		print STDERR "No GPS location to add image to.\n";
+		return;
 	}
-	#print "$longitude,$latitude\n";
+	$info->{GPSPosition} =~ /(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([NS]),\s*(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([EW])/;
+	#print "Loc: $1° $2' $3\" $4, $5° $6' $7\" $8\n";
+	$latitude = $1 + ($2 + $3/60)/60;
+	$latitude *= -1 if $4 eq "S";
+	$longitude = $5 + ($6 + $7/60)/60;
+	$longitude *= -1 if $8 eq "W";
 
+	my $url = "$website/images/$filename";
+	my $thumbnailUrl = "$website/images/160/$filename";
+	my $html = "";
 	my $mark = createPlacemark($doc);
-	addName($doc, $mark, $filename);
-	addDescription($doc, $mark, "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addRssEntry($self, $self->{rssFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addAtomEntry($self, $self->{atomFeed}, $filename, "$website/images/$filename", "<p><b>$filename</b></p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addTimestamp($doc, $mark, $timestamp);
+	if(defined($title)) {
+		$html .= '<p><b>' . escapeText($self, $title) . '</b></p>';
+		addName($doc, $mark, $title);
+	}
+	if(defined($description)) {
+		$html .= '<p>' . escapeText($self, $description) . '</p>';
+	}
+	$html .= '<a href="'  . escapeText($self, $url) . '">' .
+		 '<img src="' . escapeText($self, $thumbnailUrl) . '">' .
+		 '</a>';
+	addDescription($doc, $mark, $html);
+	addRssEntry($self,  $self->{rssFeed},  $title, $url, $html);
+	addAtomEntry($self, $self->{atomFeed}, $title, $url, $html);
+	addTimestamp($doc, $mark, $timestamp) if defined($timestamp);
 	addStyle($doc, $mark, 'photo');
-	addPoint($doc, $mark, $latitude, $longitude);
+	addPoint($doc, $mark, $latitude, $longitude, $altitude);
 	addPlacemark($doc, $base, $mark);
 }
 
@@ -113,10 +134,10 @@ die "Can't find base for unsorted photos" if @base != 1;
 $self->{rssFeed} = loadRssFeed($self);
 $self->{atomFeed} = loadAtomFeed($self);
 if(!@ARGV) {
-	addImage($_, $self, $doc, $base[0])
+	addImageScan($_, $self, $doc, $base[0])
 	    foreach glob "$self->{settings}->{cwd}/uploads/*.[jJ][pP][gG] uploads/*.[jJ][pP][eE][gG]";
 } else {
-	addImage($_, $self, $doc, $base[0])
+	addImageScan($_, $self, $doc, $base[0])
 	    foreach @ARGV;
 }
 saveKml($self, $doc);
