@@ -54,8 +54,9 @@ lockKml($self);
 
 sub processImage {
 	eval {
-	my($file) = @_;
+	my($file, $name) = @_;
 
+	$name = "Image" if !defined($name);
 	print "Processing image $file.\n" if $self->{verbose};
 	my $fileSize = -s $file;
 	#my $utcTime = 0;
@@ -73,12 +74,17 @@ sub processImage {
 		return;
 	}
 
+	my $timestamp = $exif->GetValue('DateTimeOriginal');
+	die "No date to use for naming file." if !defined($timestamp);
+	$timestamp = parseExifDate($timestamp);
+
 	eval {
-	if(!defined($exif->GetValue('GPSVersionID'))) {
+	if(!defined($exif->GetValue('GPSVersionID')) &&
+	   !defined($exif->GetValue('GPSLatitude'))) {
 		print "Geotagging photo.\n" if $self->{verbose};
-		my $timestamp = $exif->GetValue('DateTimeOriginal');
-		die "No date to use." if !defined($timestamp);
-		$timestamp = parseExifDate($timestamp);
+		#my $timestamp = $exif->GetValue('DateTimeOriginal');
+		#die "No date to use." if !defined($timestamp);
+		#$timestamp = parseExifDate($timestamp);
 
 		if($timestamp <= 981119752) {
 			die "Image timestamp is out of bounds!"
@@ -143,9 +149,18 @@ sub processImage {
 		warn "Orientation not recognized.\n";
 		$rotate = "";
 	}
-	my($fh, $tempFile) = tempfile;
-	close $fh;
-	system("jpegtran", "-optimize", "-progressive", $rotate, "-trim", "-copy", "comments", "-outfile", $tempFile, $file) == 0
+	my $outFile = strftime("%m%B/%d%a, %b %d/%H%M%S", localtime($timestamp));
+	my $filename = "$self->{settings}->{cwd}/images/$outFile$name.jpg";
+	my $path = $filename;
+	$path =~ s/[^\/]*$//;
+	system('mkdir', '-p', $path);
+	#my($fh, $tempFile) = tempfile;
+	#close $fh;
+	my $tempFile = $filename;
+	my @jpegtran = ("jpegtran", "-optimize", "-progressive");
+	push(@jpegtran, split /\s+/, $rotate) if $rotate ne "";
+	push @jpegtran, ("-trim", "-copy", "comments", "-outfile", $tempFile, $file);
+	system(@jpegtran) == 0
 	    or die "Failed to process image '$file'";
 	$exif->SetNewValue('Orientation', 1)
 	    if($rotate ne "");
@@ -156,21 +171,24 @@ sub processImage {
 
 	if($exif->WriteInfo($tempFile)) {
 		unlink($file);
-		rename($tempFile, $file);
+		#rename($tempFile, $file);
 	} else {
 		warn "Failed to save Exif data";
 		unlink($tempFile);
 	}
 	#my $info = $exif->ImageInfo($tempFile);
 	#unlink($tempFile);
-	my $info = $exif->ImageInfo($file);
+	my $info = $exif->ImageInfo($tempFile);
 	print "New UserComment: $info->{UserComment}\n" if exists($info->{UserComment});;
 	print "New Copyright: $info->{Copyright}\n" if exists($info->{Copyright});;
 	print "New GPSLatitude: $info->{GPSLatitude}\n" if exists($info->{GPSLatitude});;
 	print "New GPSLongitude: $info->{GPSLongitude}\n" if exists($info->{GPSLongitude});;
 	print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
 	print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
+
+	return $filename;
 	};
+	print STDERR $@ if $@;
 }
 
 processImage($_) foreach(@ARGV);

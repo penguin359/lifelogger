@@ -74,7 +74,6 @@ sub scanEntity {
 		my $filename = $entity->head->mime_attr('Content-Disposition.filename');
 		$filename = $entity->head->mime_attr('Content-Type.name') if !defined($filename);
 		$filename =~ s:[/\\]:_:g;
-		#print Dumper($info);
 		$fd = $entity->bodyhandle->open('r');
 		open(my $outFd, '>:bytes', "images/$filename");
 		binmode $outFd;
@@ -104,20 +103,10 @@ sub scanEntity {
 			$longitude = $entry->{longitude};
 			$altitude = $entry->{altitude};
 		}
-		#print "$longitude,$latitude\n";
 
 		my $title = $self->{subject};
-		my $descr = $descrText;
-		my $html = "<p><b>$title</b></p><p>$descr</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>";
-		my $mark = createPlacemark($doc);
-		addName($doc, $mark, $title);
-		addDescription($doc, $mark, $html);
-		addStyle($doc, $mark, 'photo');
-		addTimestamp($doc, $mark, $timestamp);
-		addPoint($doc, $mark, $latitude, $longitude);
-		addPlacemark($doc, $base, $mark);
-		addRssEntry($self, $self->{rssFeed}, $title, "$website/images/$filename", $html);
-		addAtomEntry($self, $self->{atomFeed}, $title, "$website/images/$filename", $html);
+		my $description = $descrText;
+		addImage($self, $title, $description, $filename);
 	} elsif($entity->head->mime_type eq "text/plain") {
 		print "Found text\n" if $self->{verbose};
 		#$entity->bodyhandle->print(\*STDOUT);
