@@ -64,49 +64,26 @@ sub scanEntity {
 	if($entity->head->mime_type eq "image/jpeg") {
 		print "Found an image\n" if $self->{verbose};
 		$self->{matched} = 1;
-		my $exif = new Image::ExifTool;
 		#print $entity->body->as_string;
-		$entity->bodyhandle->binmode(1);
-		my $fd = $entity->bodyhandle->open('r');
-		my $info = $exif->ImageInfo($fd);
-		close $fd;
 		#print "CD: '", $entity->head->get('Content-Disposition', 0), "'\n";
 		my $filename = $entity->head->mime_attr('Content-Disposition.filename');
 		$filename = $entity->head->mime_attr('Content-Type.name') if !defined($filename);
+		if(!defined($filename)) {
+			print STDERR "No filename to use.\n";
+			return;
+		}
 		$filename =~ s:[/\\]:_:g;
+		$entity->bodyhandle->binmode(1);
 		$fd = $entity->bodyhandle->open('r');
-		open(my $outFd, '>:bytes', "images/$filename");
+		open(my $outFd, '>:bytes', "tmp/$filename");
 		binmode $outFd;
 		while(<$fd>) {
 			print $outFd $_;
 		}
 		close $outFd;
-		createThumbnails($self, "images/$filename");
-
-		my $timestamp = $self->{date};
-		if(exists $info->{DateTimeOriginal}) {
-			$timestamp = parseExifDate($info->{DateTimeOriginal});
-		}
-		my $latitude;
-		my $longitude;
-		my $altitude;
-		if(exists $info->{GPSPosition}) {
-			$info->{GPSPosition} =~ /(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([NS]),\s*(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([EW])/;
-			#print "Loc: $1° $2' $3\" $4, $5° $6' $7\" $8\n";
-			$latitude = $1 + ($2 + $3/60)/60;
-			$latitude *= -1 if $4 eq "S";
-			$longitude = $5 + ($6 + $7/60)/60;
-			$longitude *= -1 if $8 eq "W";
-		} else {
-			my $entry = closestEntry($self, $timestamp);
-			$latitude = $entry->{latitude};
-			$longitude = $entry->{longitude};
-			$altitude = $entry->{altitude};
-		}
-
-		my $title = $self->{subject};
-		my $description = $descrText;
-		addImage($self, $title, $description, $filename);
+		$filename = processImage($self, $filename, $self->{subject});
+		addImage($filename, $self, $doc, $base, $self->{subject}, $descrText)l
+		createThumbnails($self, $filename);
 	} elsif($entity->head->mime_type eq "text/plain") {
 		print "Found text\n" if $self->{verbose};
 		#$entity->bodyhandle->print(\*STDOUT);

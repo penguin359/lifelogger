@@ -405,14 +405,17 @@ sub parseIsoTime {
 }
 
 sub createThumbnailsMod {
-	my($self, $file, $path, $name, @sizes) = @_;
+	my($self, $file, $path, @sizes) = @_;
 
 	print "Using Image::Resize\n" if $self->{verbose};
-	my $image = new Image::Resize $file;
+	my $image = new Image::Resize "$path/$file";
 	foreach (@sizes) {
-		print "Creating ${_}x${_} thumbnail for $name\n" if $self->{verbose};
+		my $path2 = "$path/$_/$file";
+		$path2 =~ s/[^\/]*$//;
+		system('mkdir', '-p', $path2);
+		print "Creating ${_}x${_} thumbnail for $file\n" if $self->{verbose};
 		my $thumbnail = $image->resize($_, $_);
-		open(my $fd, '>:bytes', "$path/$_/$name") or die "Can't open thumbnail: $!";
+		open(my $fd, '>:bytes', "$path/$_/$file") or die "Can't open thumbnail: $!";
 		binmode($fd);
 		print $fd $thumbnail->jpeg(50);
 		close $fd;
@@ -420,34 +423,39 @@ sub createThumbnailsMod {
 }
 
 sub createThumbnailsIM {
-	my($self, $file, $path, $name, @sizes) = @_;
+	my($self, $file, $path, @sizes) = @_;
 
 	print "Using ImageMagick\n" if $self->{verbose};
 	foreach (@sizes) {
-		print "Creating ${_}x${_} thumbnail for $name\n" if $self->{verbose};
-		system('convert', '-geometry', $_.'x'.$_, $file, "$path/$_/$name");
+		my $path2 = "$path/$_/$file";
+		$path2 =~ s/[^\/]*$//;
+		system('mkdir', '-p', $path2);
+		print "Creating ${_}x${_} thumbnail for $file\n" if $self->{verbose};
+		system('convert', '-geometry', $_.'x'.$_, "$path/$file", "$path/$_/$file");
 	}
 }
 
 sub createThumbnails {
 	my($self, $file) = @_;
 
-	$file =~ m:^(.*/)?([^/]+)$:;
-	my($path, $name) = ($1, $2);
-	$path = "." if !defined($path);
-	if(!defined($name) || $name eq "") {
-		warn "Unparsable image filename '$file'";
-		return;
-	}
+	#$file =~ m:^(.*/)?([^/]+)$:;
+	#my($path, $name) = ($1, $2);
+	#$path = "." if !defined($path);
+	#if(!defined($name) || $name eq "") {
+	#	warn "Unparsable image filename '$file'";
+	#	return;
+	#}
+	my $path = "$self->{settings}->{cwd}/images";
 
 	if(eval 'require Image::Resize') {
-		createThumbnailsMod($self, $file, $path, $name, ("32", "160"));
+		createThumbnailsMod($self, $file, $path, ("32", "160"));
 	} else {
-		createThumbnailsIM($self, $file, $path, $name, ("32", "160"));
+		createThumbnailsIM($self, $file, $path, ("32", "160"));
 	}
 }
 
 sub processImage {
+	my $filename2;
 	eval {
 	my($self, $file, $name) = @_;
 
@@ -464,6 +472,7 @@ sub processImage {
 		warn "Error: ", $exif->GetValue('Error');
 		return;
 	}
+	$exif->SetNewValuesFromFile($file);
 	if(!defined($exif->GetValue('ExifVersion'))) {
 		warn "Image missing Exif header";
 		return;
@@ -557,6 +566,9 @@ sub processImage {
 	push @jpegtran, ("-trim", "-copy", "comments", "-outfile", $tempFile, $file);
 	system(@jpegtran) == 0
 	    or die "Failed to process image '$file'";
+	if($self->{verbose}) {
+		print join(' ', @jpegtran), "\n";
+	}
 	$exif->SetNewValue('Orientation', 1)
 	    if($rotate ne "");
 
@@ -564,16 +576,20 @@ sub processImage {
 	$exif->SetNewValue('UserComment', 'Original Filename: '.$file.', Original Filesize: '.$fileSize.'.');
 	$exif->SetNewValue('Copyright', 'Copyright © 2010 John Doe, All Rights Reserved');
 
+	#print Dumper($exif->GetInfo);
+	#my $info = $exif->ImageInfo($tempFile);
+	#print Dumper($exif->GetInfo);
 	if($exif->WriteInfo($tempFile)) {
 		unlink($file);
 		#rename($tempFile, $file);
 	} else {
-		warn "Failed to save Exif data";
+		warn "Failed to save Exif data", $exif->GetValue("Error");
 		unlink($tempFile);
 	}
 	#my $info = $exif->ImageInfo($tempFile);
 	#unlink($tempFile);
 	my $info = $exif->ImageInfo($tempFile);
+	#print Dumper($exif->GetInfo);
 	print "New UserComment: $info->{UserComment}\n" if exists($info->{UserComment});;
 	print "New Copyright: $info->{Copyright}\n" if exists($info->{Copyright});;
 	print "New GPSLatitude: $info->{GPSLatitude}\n" if exists($info->{GPSLatitude});;
@@ -581,9 +597,63 @@ sub processImage {
 	print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
 	print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
 
-	return $filename;
+	$filename2 = "$outFile$name.jpg";
 	};
 	print STDERR $@ if $@;
+	return $filename2;
+}
+
+sub addImage {
+	my($filename, $self, $doc, $base, $title, $description) = @_;
+
+	my $path = "$self->{settings}->{cwd}/images/$filename";
+	my $exif = new Image::ExifTool;
+	open(my $fd, '<:bytes', $path) or die "Can't open file $path";
+	binmode($fd);
+	my $info = $exif->ImageInfo($fd);
+	close $fd;
+
+	my $website = $self->{settings}->{website};
+
+	my $timestamp;
+	if(exists $info->{DateTimeOriginal}) {
+		$timestamp = parseExifDate($info->{DateTimeOriginal});
+	}
+	my $latitude;
+	my $longitude;
+	my $altitude;
+	if(!exists $info->{GPSPosition}) {
+		print STDERR "No GPS location to add image to.\n";
+		return;
+	}
+	$info->{GPSPosition} =~ /(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([NS]),\s*(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([EW])/;
+	#print "Loc: $1° $2' $3\" $4, $5° $6' $7\" $8\n";
+	$latitude = $1 + ($2 + $3/60)/60;
+	$latitude *= -1 if $4 eq "S";
+	$longitude = $5 + ($6 + $7/60)/60;
+	$longitude *= -1 if $8 eq "W";
+
+	my $url = "$website/images/$filename";
+	my $thumbnailUrl = "$website/images/160/$filename";
+	my $html = "";
+	my $mark = createPlacemark($doc);
+	if(defined($title)) {
+		$html .= '<p><b>' . escapeText($self, $title) . '</b></p>';
+		addName($doc, $mark, $title);
+	}
+	if(defined($description)) {
+		$html .= '<p>' . escapeText($self, $description) . '</p>';
+	}
+	$html .= '<a href="'  . escapeText($self, $url) . '">' .
+		 '<img src="' . escapeText($self, $thumbnailUrl) . '">' .
+		 '</a>';
+	addDescription($doc, $mark, $html);
+	addRssEntry($self,  $self->{rssFeed},  $title, $url, $html);
+	addAtomEntry($self, $self->{atomFeed}, $title, $url, $html);
+	addTimestamp($doc, $mark, $timestamp) if defined($timestamp);
+	addStyle($doc, $mark, 'photo');
+	addPoint($doc, $mark, $latitude, $longitude, $altitude);
+	addPlacemark($doc, $base, $mark);
 }
 
 1;

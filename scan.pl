@@ -56,72 +56,20 @@ sub addImageScan {
 	$filename =~ s:.*/::;
 	$filename =~ s:\.[jJ][pP][eE]?[gG]$:.jpg:;
 
-	print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
-	rename($path, "images/$filename") or die "Failed rename(): $!";
-	createThumbnails($self, "images/$filename");
+	#print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
+	#rename($path, "images/$filename") or die "Failed rename(): $!";
 
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
-	    $atime,$mtime,$ctime,$blksize,$blocks) = stat("images/$filename");
+	#my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
+	#    $atime,$mtime,$ctime,$blksize,$blocks) = stat("images/$filename");
 
-	my $timestamp = $mtime;
-	die "Failed to stat $path: $!" if(!defined($timestamp) || $timestamp == 0);
+	#my $timestamp = $mtime;
+	#die "Failed to stat $path: $!" if(!defined($timestamp) || $timestamp == 0);
 
 	my $title = $filename;
 	$title =~ s/\.jpg$//;
+	$filename = processImage($self, $path, $title);
 	addImage($filename, $self, $doc, $base, $title);
-}
-
-sub addImage {
-	my($filename, $self, $doc, $base, $title, $description) = @_;
-
-	my $path = "images/$filename";
-	my $exif = new Image::ExifTool;
-	open(my $fd, '<:bytes', $path) or die "Can't open file $path";
-	binmode($fd);
-	my $info = $exif->ImageInfo($fd);
-	close $fd;
-
-	my $website = $self->{settings}->{website};
-
-	my $timestamp;
-	if(exists $info->{DateTimeOriginal}) {
-		$timestamp = parseExifDate($info->{DateTimeOriginal});
-	}
-	my $latitude;
-	my $longitude;
-	my $altitude;
-	if(!exists $info->{GPSPosition}) {
-		print STDERR "No GPS location to add image to.\n";
-		return;
-	}
-	$info->{GPSPosition} =~ /(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([NS]),\s*(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([EW])/;
-	#print "Loc: $1° $2' $3\" $4, $5° $6' $7\" $8\n";
-	$latitude = $1 + ($2 + $3/60)/60;
-	$latitude *= -1 if $4 eq "S";
-	$longitude = $5 + ($6 + $7/60)/60;
-	$longitude *= -1 if $8 eq "W";
-
-	my $url = "$website/images/$filename";
-	my $thumbnailUrl = "$website/images/160/$filename";
-	my $html = "";
-	my $mark = createPlacemark($doc);
-	if(defined($title)) {
-		$html .= '<p><b>' . escapeText($self, $title) . '</b></p>';
-		addName($doc, $mark, $title);
-	}
-	if(defined($description)) {
-		$html .= '<p>' . escapeText($self, $description) . '</p>';
-	}
-	$html .= '<a href="'  . escapeText($self, $url) . '">' .
-		 '<img src="' . escapeText($self, $thumbnailUrl) . '">' .
-		 '</a>';
-	addDescription($doc, $mark, $html);
-	addRssEntry($self,  $self->{rssFeed},  $title, $url, $html);
-	addAtomEntry($self, $self->{atomFeed}, $title, $url, $html);
-	addTimestamp($doc, $mark, $timestamp) if defined($timestamp);
-	addStyle($doc, $mark, 'photo');
-	addPoint($doc, $mark, $latitude, $longitude, $altitude);
-	addPlacemark($doc, $base, $mark);
+	createThumbnails($self, $filename);
 }
 
 my $doc = loadKml($self);

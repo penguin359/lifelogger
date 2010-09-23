@@ -81,7 +81,7 @@ sub addImage {
 	$filename =~ s:\.[jJ][pP][eE]?[gG]$:.jpg:;
 	print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
 	rename($path, "images/$filename") or die "Failed rename(): $!";
-	createThumbnails($self, "images/$filename");
+	createThumbnails($self, $filename);
 
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
 	    $atime,$mtime,$ctime,$blksize,$blocks) = stat("images/$filename");
