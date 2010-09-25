@@ -66,6 +66,8 @@ foreach my $item (@items) {
 	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->nodeValue;
 	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->nodeValue;
 	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->nodeValue;
+	my $point     = ${$xc->findnodes('georss:point/text()', $item)}[0];
+	$point        = $point->nodeValue if defined($point);
 	my $timestamp = parseDate($pubDate);
 
 	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $doc);
@@ -85,7 +87,12 @@ foreach my $item (@items) {
 	$link  = escapeText($self, $link);
 
 	my $mark = createPlacemark($doc);
-	my $entry = closestEntry($self, $timestamp);
+	my $entry = {};
+	if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
+		($entry->{latitude}, $entry->{longitude}) = ($1, $2);
+	} else {
+		$entry = closestEntry($self, $timestamp);
+	}
 	#addName($doc, $mark, $self->{subject});
 	addDescription($doc, $mark, "<p>$descr</p><a href=\"$link\">Link</a>");
 	addTimestamp($doc, $mark, $timestamp);
