@@ -161,10 +161,12 @@ sub parseData {
 sub updateLastTimestamp {
 	my($self, $timestamp) = @_;
 
+	print "Saving timestamp: '$timestamp'\n" if $self->{verbose};
 	$self->{lastTimestamp} = $timestamp;
 	open(my $fd, ">$timestampFile") or return;
 	print $fd "$timestamp\n";
 	close $fd;
+	print "Success\n" if $self->{verbose};
 }
 
 sub lastTimestamp {
@@ -257,12 +259,14 @@ sub appendDataIM {
 	seek $fd, 0, SEEK_END;
 
 	my $lastTimestamp = lastTimestamp($self);
+	print "Last timestamp was: '$lastTimestamp'\n" if $self->{verbose};
 	foreach my $entry (@$entries) {
 		print $fd "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
 		$lastTimestamp = $entry->{timestamp}
 		    if defined($entry->{timestamp}) &&
 		       $lastTimestamp < $entry->{timestamp};
 	}
+	print "Last timestamp now is: '$lastTimestamp'\n" if $self->{verbose};
 
 	close $fd;
 
