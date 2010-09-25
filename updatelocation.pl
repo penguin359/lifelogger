@@ -57,7 +57,7 @@ lockKml($self);
 my $newEntries = [];
 if(defined($ARGV[0])) {
 	print "Loading CSV file.\n" if $self->{verbose};
-	open(my $fd, $ARGV[0]) or die "Can't load file";
+	open(my $fd, $ARGV[0]) or die "Can't load file '$ARGV[0]'";
 	my @lines = <$fd>;
 	($newEntries) = parseData($self, \@lines);
 } else {

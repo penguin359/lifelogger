@@ -51,9 +51,17 @@ lockKml($self);
 
 my $entries = loadData($self);
 my $lastTimestamp = @{$entries}[0]->{timestamp};
+my $line = 2;
 foreach(@$entries) {
 	if(abs($_->{timestamp} - $lastTimestamp) > $diff) {
-		printf "Big time difference: %.2f @ %d\n", ($_->{timestamp} - $lastTimestamp)/60, $_->{timestamp};
+		printf "Big time difference: %.2f @ %d at line $line\n", ($_->{timestamp} - $lastTimestamp)/60, $_->{timestamp};
+	}
+	if($_->{timestamp} == $lastTimestamp && $line > 2) {
+		print "Duplicate timestamp: $_->{timestamp} at line $line\n";
+	}
+	if($_->{timestamp} < $lastTimestamp) {
+		printf "Time went backwarks: %.2f @ %d at line $line\n", ($_->{timestamp} - $lastTimestamp)/60, $_->{timestamp};
 	}
 	$lastTimestamp = $_->{timestamp};
+	$line++;
 }
