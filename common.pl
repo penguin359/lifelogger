@@ -483,8 +483,10 @@ sub processImage {
 	$timestamp = parseExifDate($timestamp);
 
 	eval {
-	if(!defined($exif->GetValue('GPSVersionID')) &&
-	   !defined($exif->GetValue('GPSLatitude'))) {
+	if((!defined($exif->GetValue('GPSVersionID')) &&
+	    !defined($exif->GetValue('GPSLatitude'))) ||
+	   ($exif->GetValue('GPSLatitude') == 0 &&
+	    $exif->GetValue('GPSLongitude') == 0)) {
 		print "Geotagging photo.\n" if $self->{verbose};
 		#my $timestamp = $exif->GetValue('DateTimeOriginal');
 		#die "No date to use." if !defined($timestamp);
