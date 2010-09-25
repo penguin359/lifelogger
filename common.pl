@@ -219,7 +219,7 @@ sub escapeText {
 	$text =~ s/</&lt;/g;
 	$text =~ s/>/&gt;/g;
 	$text =~ s/"/&quot;/g;
-	$text =~ s/'/&#39;/g;
+	#$text =~ s/'/&#39;/g;
 	$text;
 }
 
