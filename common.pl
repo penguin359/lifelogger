@@ -573,7 +573,9 @@ sub processImage {
 	    if($rotate ne "");
 
 	#Set GeoTagged EXIF data:
-	$exif->SetNewValue('UserComment', 'Original Filename: '.$file.', Original Filesize: '.$fileSize.'.');
+	my $originalName = $file;
+	$originalName =~ s:.*/::;
+	$exif->SetNewValue('UserComment', 'Original Filename: '.$originalName.', Original Filesize: '.$fileSize.'.');
 	$exif->SetNewValue('Copyright', 'Copyright © 2010 John Doe, All Rights Reserved');
 
 	#print Dumper($exif->GetInfo);

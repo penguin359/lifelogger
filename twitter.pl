@@ -85,8 +85,8 @@ foreach my $item (@items) {
 	addDescription($doc, $mark, "<p>$descr</p><a href=\"$link\">Link</a>");
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, 'twitter');
-	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
 	addExtendedData($doc, $mark, { guid => $guid });
+	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
 	addPlacemark($doc, $base[0], $mark);
 }
 saveKml($self, $doc);

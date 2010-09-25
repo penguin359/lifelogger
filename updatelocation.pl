@@ -105,10 +105,10 @@ foreach my $entry (@$kmlEntries) {
 	my $mark = createPlacemark($doc);
 	addTimestamp($doc, $mark, $entry->{timestamp});
 	addStyle($doc, $mark, 'icon');
-	addPoint($doc, $mark, $entry->{longitude}, $entry->{latitude}, $entry->{altitude});
 	addExtendedData($doc, $mark, {
 	    speed => $entry->{speed} . " m/s",
 	    heading => $entry->{heading}});
+	addPoint($doc, $mark, $entry->{longitude}, $entry->{latitude}, $entry->{altitude});
 	addPlacemark($doc, $locationBase[0], $mark);
 }
 

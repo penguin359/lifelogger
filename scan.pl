@@ -68,6 +68,7 @@ sub addImageScan {
 	my $title = $filename;
 	$title =~ s/\.jpg$//;
 	$filename = processImage($self, $path, $title);
+	die "Could not process image 'tmp/$filename'" if !defined($filename);
 	addImage($filename, $self, $doc, $base, $title);
 	createThumbnails($self, $filename);
 }
