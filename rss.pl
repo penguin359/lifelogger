@@ -59,8 +59,9 @@ my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 
 die "Can't find base for twitter" if @base != 1;
 
+my $newEntries = [];
 #print "List:\n";
-foreach my $item (@items) {
+foreach my $item (reverse @items) {
 	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->nodeValue;
 	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->nodeValue;
 	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->nodeValue;
@@ -90,10 +91,17 @@ foreach my $item (@items) {
 	my $entry = {};
 	if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
 		($entry->{latitude}, $entry->{longitude}) = ($1, $2);
+		$entry->{key} = 0;
+		$entry->{label} = 'Twitter';
+		$entry->{timestamp} = $timestamp;
+		$entry->{altitude} = '';
+		$entry->{speed} = '';
+		$entry->{heading} = '';
+		push @$newEntries, $entry;
 	} else {
 		$entry = closestEntry($self, $timestamp);
 	}
-	#addName($doc, $mark, $self->{subject});
+	addName($doc, $mark, $title);
 	addDescription($doc, $mark, "<p>$descr</p><a href=\"$link\">Link</a>");
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, 'twitter');
@@ -101,4 +109,8 @@ foreach my $item (@items) {
 	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
 	addPlacemark($doc, $base[0], $mark);
 }
+
+print "Saving location data.\n" if $self->{verbose};
+appendData($self, $newEntries);
+
 saveKml($self, $doc);
