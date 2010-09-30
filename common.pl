@@ -566,7 +566,6 @@ sub processImage {
 	my @jpegtran = ("jpegtran", "-optimize", "-progressive");
 	push(@jpegtran, split /\s+/, $rotate) if $rotate ne "";
 	push @jpegtran, ("-trim", "-copy", "comments", "-outfile", $tempFile, $file);
-	@jpegtran = ("cp", $file, $tempFile);
 	system(@jpegtran) == 0
 	    or die "Failed to process image '$file'";
 	if($self->{verbose}) {
@@ -580,10 +579,6 @@ sub processImage {
 	$originalName =~ s:.*/::;
 	$exif->SetNewValue('UserComment', 'Original Filename: '.$originalName.', Original Filesize: '.$fileSize.'.');
 	$exif->SetNewValue('Copyright', 'Copyright © 2010 John Doe, All Rights Reserved');
-	my $str = 'Copyright © 2010 John Doe, All Rights Reserved';
-	print "[VALID] " if utf8::valid($str);
-	print "[UTF8] " if utf8::is_utf8($str);
-	print $str, "\n";
 
 	#print Dumper($exif->GetInfo);
 	#my $info = $exif->ImageInfo($tempFile);
@@ -605,11 +600,6 @@ sub processImage {
 	print "New GPSLongitude: $info->{GPSLongitude}\n" if exists($info->{GPSLongitude});;
 	print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
 	print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
-	$str = $info->{Copyright};
-	utf8::decode($str);
-	print "[VALID] " if utf8::valid($str);
-	print "[UTF8] " if utf8::is_utf8($str);
-	print $str, "\n";
 
 	$filename2 = "$outFile$name.jpg";
 	};
