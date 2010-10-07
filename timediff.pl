@@ -49,7 +49,7 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
-my $entries = loadData($self);
+my $entries = readData($self);
 my $lastTimestamp = @{$entries}[0]->{timestamp};
 foreach(@$entries) {
 	if(abs($_->{timestamp} - $lastTimestamp) > $diff) {

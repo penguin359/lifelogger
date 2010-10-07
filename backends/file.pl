@@ -94,9 +94,10 @@ sub parseDataPC {
 	my $fields;
 	(undef, $fields, $required) = parseDataHeaderPC($self, $lines, $required);
 
-	#print Dumper($fields, $required);
 	my $line = 3;
 	my $lastTimestamp = 0;
+	my $lastTrack = 0;
+	my $lastSeg = 0;
 	my $entries = [];
 	line: foreach(@$lines) {
 		chomp;
@@ -116,21 +117,25 @@ sub parseDataPC {
 				next line;
 			}
 		}
-		if($entry->{id} !~ /^\s*\d+\s*$/) {
+		if(defined($entry->{id}) &&
+		   $entry->{id} !~ /^\s*\d+\s*$/) {
 			warn "Bad id on line ", $line-1, "\n";
 			next;
 		}
-		if($entry->{timestamp} !~ /^\s*\d+\s*$/) {
+		if(defined($entry->{timestamp}) &&
+		   $entry->{timestamp} !~ /^\s*\d+\s*$/) {
 			warn "Bad timestamp on line ", $line-1, "\n";
 			next;
 		}
-		if($entry->{latitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
-		   $entry->{latitude} < -90 || $entry->{latitude} > 90) {
+		if(defined($entry->{latitude}) &&
+		   ($entry->{latitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
+		    $entry->{latitude} < -90 || $entry->{latitude} > 90)) {
 			warn "Bad latitude on line ", $line-1, "\n";
 			next;
 		}
-		if($entry->{longitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
-		   $entry->{longitude} < -180 || $entry->{longitude} > 180) {
+		if(defined($entry->{longitude}) &&
+		   ($entry->{longitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
+		    $entry->{longitude} < -180 || $entry->{longitude} > 180)) {
 			warn "Bad longitude on line ", $line-1, "\n";
 			next;
 		}
@@ -159,21 +164,33 @@ sub parseData {
 	}
 }
 
-sub updateLastTimestamp {
-	my($self, $timestamp) = @_;
-
-	$self->{lastTimestamp} = $timestamp;
-	open(my $fd, ">$timestampFile") or return;
-	print $fd "$timestamp\n";
-	close $fd;
-}
-
 my $fieldsTimestamp = [
     "source",
     "timestamp",
     "id",
     "seg",
     "track"];
+
+sub updateLastTimestamp {
+	my($self, $timestamp) = @_;
+
+	print "Updating last timestamp.\n" if $self->{verbose};
+	$self->{lastTimestamp} = $timestamp;
+	$self->{sources}->[0]->{last} = {
+		source => 0,
+		timestamp => $timestamp,
+		id => 0,
+		seg => 0,
+		track => 0
+	};
+	my @entries = ();
+	push @entries, $_->{last}
+	    foreach(@{$self->{sources}});
+	writeDataPC($self, \@entries, $timestampFile, $fieldsTimestamp);
+	#open(my $fd, ">$timestampFile") or return;
+	#print $fd "$timestamp\n";
+	#close $fd;
+}
 
 sub lastTimestamp {
 	my($self, $id) = @_;
@@ -191,8 +208,8 @@ sub lastTimestamp {
 		my @lines = <$fd>;
 		close $fd;
 		if(@lines > 1) {
-			#if($lines[0] =~ "PhotoCatalog") {
-			my $entries = parseDataPC($self, \@lines, $fieldsTimestamp);
+			#if($lines[0] =~ "PhotoCatalog")
+			my($entries) = parseDataPC($self, \@lines, $fieldsTimestamp);
 			foreach(@$entries) {
 				$sourcesId->{$_->{source}}->{last} = $_
 				    if defined($sourcesId->{$_->{source}});
@@ -208,7 +225,7 @@ sub lastTimestamp {
 			}
 		}
 	}
-	loadData($self);
+	readData($self);
 	updateLastTimestamp($self, $self->{lastTimestampData});
 	return $self->{lastTimestamp};
 }
@@ -260,10 +277,10 @@ sub writeEntries {
 sub writeDataIM {
 	my($self, $entries, $file) = @_;
 
-	my $update = 1;
+	my $update = 0;
 	if(!defined($file)) {
 		$file = $dataFile;
-		$update = 0;
+		$update = 1;
 	}
 	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
 
@@ -278,10 +295,10 @@ sub writeDataIM {
 sub writeDataPC {
 	my($self, $entries, $file, $fields) = @_;
 
-	my $update = 1;
+	my $update = 0;
 	if(!defined($file)) {
 		$file = $dataFile;
-		$update = 0;
+		$update = 1;
 	}
 	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
 
@@ -306,10 +323,10 @@ sub writeDataPC {
 sub appendDataIM {
 	my($self, $entries, $file) = @_;
 
-	my $update = 1;
+	my $update = 0;
 	if(!defined($file)) {
 		$file = $dataFile;
-		$update = 0;
+		$update = 1;
 	}
 	open(my $fd, ">>", $file) or die "Can't append InstaMapper updates";
 
@@ -323,10 +340,10 @@ sub appendDataIM {
 sub appendDataPC {
 	my($self, $entries, $file) = @_;
 
-	my $update = 1;
+	my $update = 0;
 	if(!defined($file)) {
 		$file = $dataFile;
-		$update = 0;
+		$update = 1;
 	}
 	open(my $fd, "+<", $file) or die "Can't append PhotoCatalog updates";
 
@@ -347,52 +364,59 @@ sub appendDataPC {
 sub appendData {
 	my($self, $entries, $file) = @_;
 
-	$file = $dataFile if !defined($file);
-	open(my $fd, "<", $file) or die "Can't append updates";
+	my $appendFile = $file;
+	$appendFile = $dataFile if !defined($appendFile);
+	open(my $fd, "<", $appendFile) or die "Can't append updates";
 
 	my $version = <$fd>;
 	close $fd;
 
 	die "Missing header for updates" if !defined($version);
 	if($version =~ "InstaMapper API") {
-		return appendDataIM($self, $entries);
+		return appendDataIM($self, $entries, $file);
 	} elsif($version =~ "PhotoCatalog") {
-		return appendDataPC($self, $entries);
+		return appendDataPC($self, $entries, $file);
 	} else {
 		die "Unrecognized file for updates";
 	}
 }
 
-sub loadData {
-	my($self) = @_;
+sub readData {
+	my($self, $file) = @_;
 
-	return $self->{data} if exists($self->{data});
+	my $fd;
+	my $data;
+	if(!defined($file)) {
+		return $self->{data} if exists($self->{data});
 
-	open(my $fd, $dataFile) or die "Can't open data file";
-	my @lines = <$fd>;
-	close $fd;
+		open($fd, $dataFile) or die "Can't open data file";
+		my @lines = <$fd>;
+		close $fd;
 
-	($self->{data}, $self->{lastTimestampData}) = parseData($self, \@lines);
+		($self->{data}, $self->{lastTimestampData}) = parseData($self, \@lines);
+		$data = $self->{data};
+		my $last = {
+			source => 0,
+			timestamp => $self->{lastTimestampData},
+			id => 0,
+			seg => 0,
+			track => 0
+		};
+	} else {
+		open($fd, $file) or die "Can't open data file";
+		my @lines = <$fd>;
+		close $fd;
 
-	return $self->{data};
-}
+		($data) = parseData($self, \@lines);
+	}
 
-sub saveData {
-	my($self, $str) = @_;
-
-	open(my $fd, ">>$dataFile") or die "Can't write InstaMapper updates";
-	print $fd $str;
-	close $fd;
-	#print Dumper($newEntries);
-	#exit 0;
-	#unlink($dataFile);
-	#rename("$dataFile.bak", $dataFile);
+	return $data;
 }
 
 sub closestEntry {
 	my($self, $timestamp) = @_;
 
-	my $entries = loadData($self);
+	my $entries = readData($self);
 	my $matchEntry = $entries->[0];
 	my $offset = abs($matchEntry->{timestamp} - $timestamp);
 	foreach my $entry (@$entries) {
