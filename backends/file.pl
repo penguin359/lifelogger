@@ -177,7 +177,7 @@ sub updateLastTimestamp {
 	print "Updating last timestamp.\n" if $self->{verbose};
 	$self->{lastTimestamp} = $timestamp;
 	$self->{sources}->[0]->{last} = {
-		source => 0,
+		source => $self->{sources}->[0]->{id},
 		timestamp => $timestamp,
 		id => 0,
 		seg => 0,
@@ -229,7 +229,7 @@ sub lastTimestamp {
 				$self->{lastTimestamp} = $timestamp;
 				if($hash) {
 					return {
-						source => 0,
+						source => $self->{sources}->[0]->{id},
 						timestamp => $self->{lastTimestamp},
 						id => 0,
 						seg => 0,
@@ -240,11 +240,12 @@ sub lastTimestamp {
 			}
 		}
 	}
+	print "No valid cached timestamp.\n" if $self->{verbose};
 	readData($self);
 	updateLastTimestamp($self, $self->{lastTimestampData});
 	if($hash) {
 		return {
-			source => 0,
+			source => $self->{sources}->[0]->{id},
 			timestamp => $self->{lastTimestamp},
 			id => 0,
 			seg => 0,
@@ -420,7 +421,7 @@ sub readData {
 		($self->{data}, $self->{lastTimestampData}) = parseData($self, \@lines);
 		$data = $self->{data};
 		my $last = {
-			source => 0,
+			source => $self->{sources}->[0]->{id},
 			timestamp => $self->{lastTimestampData},
 			id => 0,
 			seg => 0,
