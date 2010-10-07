@@ -404,6 +404,19 @@ sub parseIsoTime {
 	}
 }
 
+sub mkdirPath {
+	my($path) = @_;
+
+	if($^O eq "MSWin32") {
+		# Windows NT and newer create intermediate directories
+		# by default
+		$path =~ tr:/:\\:;
+		system('mkdir', $path);
+	} else {
+		system('mkdir', '-p', $path);
+	}
+}
+
 sub createThumbnailsMod {
 	my($self, $file, $path, @sizes) = @_;
 
@@ -412,7 +425,7 @@ sub createThumbnailsMod {
 	foreach (@sizes) {
 		my $path2 = "$path/$_/$file";
 		$path2 =~ s/[^\/]*$//;
-		system('mkdir', '-p', $path2);
+		mkdirPath($path2);
 		print "Creating ${_}x${_} thumbnail for $file\n" if $self->{verbose};
 		my $thumbnail = $image->resize($_, $_);
 		open(my $fd, '>:bytes', "$path/$_/$file") or die "Can't open thumbnail: $!";
@@ -429,7 +442,7 @@ sub createThumbnailsIM {
 	foreach (@sizes) {
 		my $path2 = "$path/$_/$file";
 		$path2 =~ s/[^\/]*$//;
-		system('mkdir', '-p', $path2);
+		mkdirPath($path2);
 		print "Creating ${_}x${_} thumbnail for $file\n" if $self->{verbose};
 		system('convert', '-geometry', $_.'x'.$_, "$path/$file", "$path/$_/$file");
 	}
@@ -533,7 +546,7 @@ sub processImage {
 	}
 	};
 	if($@) {
-		print "GPS Prob: $@\n";
+		die "GPS Prob: $@\n";
 	}
 
 	#Remove Thumbnail:
@@ -559,15 +572,30 @@ sub processImage {
 	my $filename = "$self->{settings}->{cwd}/images/$outFile$name.jpg";
 	my $path = $filename;
 	$path =~ s/[^\/]*$//;
-	system('mkdir', '-p', $path);
+	mkdirPath($path);
 	#my($fh, $tempFile) = tempfile;
 	#close $fh;
 	my $tempFile = $filename;
 	my @jpegtran = ("jpegtran", "-optimize", "-progressive");
 	push(@jpegtran, split /\s+/, $rotate) if $rotate ne "";
 	push @jpegtran, ("-trim", "-copy", "comments", "-outfile", $tempFile, $file);
-	system(@jpegtran) == 0
-	    or die "Failed to process image '$file'";
+	my $status = system(@jpegtran);
+	if(($^O eq "MSWin32" && $status != 0) || $status < 0) {
+		# Jpegtran is not installed so just copy
+		# image without rotating
+		warn "jpegtran not installed so can't rotate image\n";
+		open(my $inFd, '<:bytes', $file);
+		binmode $inFd;
+		open(my $outFd, '>:bytes', $tempFile);
+		binmode $outFd;
+		while(<$inFd>) {
+			print $outFd $_;
+		}
+		close $outFd;
+		close $inFd;
+	} elsif($status != 0) {
+		die "Failed to process image '$file'";
+	}
 	if($self->{verbose}) {
 		print join(' ', @jpegtran), "\n";
 	}

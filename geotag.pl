@@ -52,7 +52,7 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
-processImage($self, $_) foreach(@ARGV);
+eval { processImage($self, $_); 1; } || warn $@ foreach(@ARGV);
 
 exit 0;
 

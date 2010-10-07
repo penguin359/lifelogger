@@ -103,10 +103,23 @@ foreach my $lib (
 }
 
 eval "require Image::Resize";
-my $dummy = `convert`;
+my $null = "/dev/null";
+$null = "NUL" if $^O eq "MSWin32";
+system("convert -version >$null 2>&1");
 if($@ && $?) {
 	print STDERR "Either Image::Resize needs to be installed or ImageMagick must be in the PATH\n";
 	installLib("Image::Resize");
+}
+
+# There has got to be a better way to detect the presence of executables.
+# Unfortunately, jpegtran doesn't offer an option like -version which will
+# cause it to exit sucessfully so I need to detect the difference between
+# jpegtran exiting unsuccessfully and failure to execute while trying to
+# keep this script's output clean.
+if(($^O eq "MSWin32" &&
+    `cmd /V:ON /C "jpegtran -outfile NUL NUL 2>NUL & echo !ERRORLEVEL!"` == 9009) ||
+   system("jpegtran <$null >&0 2>&0") == 127*256) {
+	print STDERR "Install jpegtran if you want images to be automatically rotated\n";
 }
 
 print "\n";
