@@ -568,7 +568,7 @@ sub processImage {
 		warn "Orientation not recognized.\n";
 		$rotate = "";
 	}
-	my $outFile = strftime("%m%B/%d%a, %b %d/%H%M%S", localtime($timestamp));
+	my $outFile = strftime("%m%B/%d%a, %b %e/%H%M%S", localtime($timestamp));
 	my $filename = "$self->{settings}->{cwd}/images/$outFile$name.jpg";
 	my $path = $filename;
 	$path =~ s/[^\/]*$//;
@@ -619,11 +619,10 @@ sub processImage {
 		warn "Failed to save Exif data", $exif->GetValue("Error");
 		unlink($tempFile);
 	}
-	#my $info = $exif->ImageInfo($tempFile);
-	#unlink($tempFile);
-	my $info = $exif->ImageInfo($tempFile);
-	#print Dumper($exif->GetInfo);
 	if($self->{verbose}) {
+		my $info = $exif->ImageInfo($tempFile);
+		#print Dumper($exif->GetInfo);
+		utf8::decode($info->{Copyright});
 		print "New UserComment: $info->{UserComment}\n" if exists($info->{UserComment});;
 		print "New Copyright: $info->{Copyright}\n" if exists($info->{Copyright});;
 		print "New GPSLatitude: $info->{GPSLatitude}\n" if exists($info->{GPSLatitude});;
@@ -631,6 +630,7 @@ sub processImage {
 		print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
 		print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
 	}
+	#unlink($tempFile);
 
 	$filename2 = "$outFile$name.jpg";
 	};
