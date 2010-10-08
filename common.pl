@@ -579,6 +579,9 @@ sub processImage {
 	my @jpegtran = ("jpegtran", "-optimize", "-progressive");
 	push(@jpegtran, split /\s+/, $rotate) if $rotate ne "";
 	push @jpegtran, ("-trim", "-copy", "comments", "-outfile", $tempFile, $file);
+	if($self->{verbose}) {
+		print join(' ', @jpegtran), "\n";
+	}
 	my $status = system(@jpegtran);
 	if(($^O eq "MSWin32" && $status != 0) || $status < 0) {
 		# Jpegtran is not installed so just copy
@@ -595,16 +598,14 @@ sub processImage {
 		close $inFd;
 	} elsif($status != 0) {
 		die "Failed to process image '$file'";
+	} else {
+		$exif->SetNewValue('Orientation', 1)
+		    if($rotate ne "");
 	}
-	if($self->{verbose}) {
-		print join(' ', @jpegtran), "\n";
-	}
-	$exif->SetNewValue('Orientation', 1)
-	    if($rotate ne "");
 
 	#Set GeoTagged EXIF data:
 	my $originalName = $file;
-	$originalName =~ s:.*/::;
+	$originalName =~ s:.*[/\]::;
 	$exif->SetNewValue('UserComment', 'Original Filename: '.$originalName.', Original Filesize: '.$fileSize.'.');
 	$exif->SetNewValue('Copyright', 'Copyright © 2010 John Doe, All Rights Reserved');
 
@@ -622,12 +623,14 @@ sub processImage {
 	#unlink($tempFile);
 	my $info = $exif->ImageInfo($tempFile);
 	#print Dumper($exif->GetInfo);
-	print "New UserComment: $info->{UserComment}\n" if exists($info->{UserComment});;
-	print "New Copyright: $info->{Copyright}\n" if exists($info->{Copyright});;
-	print "New GPSLatitude: $info->{GPSLatitude}\n" if exists($info->{GPSLatitude});;
-	print "New GPSLongitude: $info->{GPSLongitude}\n" if exists($info->{GPSLongitude});;
-	print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
-	print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
+	if($self->{verbose}) {
+		print "New UserComment: $info->{UserComment}\n" if exists($info->{UserComment});;
+		print "New Copyright: $info->{Copyright}\n" if exists($info->{Copyright});;
+		print "New GPSLatitude: $info->{GPSLatitude}\n" if exists($info->{GPSLatitude});;
+		print "New GPSLongitude: $info->{GPSLongitude}\n" if exists($info->{GPSLongitude});;
+		print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
+		print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
+	}
 
 	$filename2 = "$outFile$name.jpg";
 	};
