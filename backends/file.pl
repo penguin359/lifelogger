@@ -184,75 +184,75 @@ sub updateLastTimestamp {
 		track => 0
 	};
 	my @entries = ();
-	push @entries, $_->{last}
-	    foreach(@{$self->{sources}});
+	push @entries, _lastTimestamp($self, $_)
+	    foreach(keys %{$self->{sourcesId}});
 	writeDataPC($self, \@entries, $timestampFile, $fieldsTimestamp);
-	#open(my $fd, ">$timestampFile") or return;
-	#print $fd "$timestamp\n";
-	#close $fd;
+}
+
+sub _lastTimestamp {
+	my($self, $id) = @_;
+
+	if(!defined($id)) {
+		return $self->{lastTimestamp}
+		    if defined($self->{lastTimestamp});
+		return 0;
+	}
+
+	my $source = $self->{sourcesId}->{$id};
+	die "Source $id not configured" if !defined($source);
+
+	my $last = $source->{last};
+	$last->{source}	   = $id;
+	$last->{timestamp} = 0 if !defined($last->{timestamp});
+	$last->{id}	   = 0 if !defined($last->{id});
+	$last->{seg}	   = 0 if !defined($last->{seg});
+	$last->{track}	   = 0 if !defined($last->{track});
+
+	return $last;
 }
 
 sub lastTimestamp {
 	my($self, $id) = @_;
 
-	my $hash = 1;
-	if(!defined($id)) {
-		$hash = 0;
-		return $self->{lastTimestamp}
-		    if exists($self->{lastTimestamp});
-		$id = $self->{sources}->[0]->{id} if !defined($id);
-	}
 	my $sourcesId = $self->{sourcesId};
-	die "Unknown source" if !defined($sourcesId->{$id});
-	return $sourcesId->{$id}->{last}
-	    if $hash && exists($sourcesId->{$id}->{last}->{timestamp});
-	return $sourcesId->{$id}->{last}->{timestamp}
-	    if exists($sourcesId->{$id}->{last}->{timestamp});
+	my $source0 = $self->{sources}->[0];
+
+	# Check if specific id declared.
+	return _lastTimestamp($self, $id)
+	    if defined($self->{lastTimestamp});
 	if(open(my $fd, "<", $timestampFile)) {
 		my @lines = <$fd>;
 		close $fd;
 		if(@lines > 1) {
-			#if($lines[0] =~ "PhotoCatalog")
 			my($entries) = parseDataPC($self, \@lines, $fieldsTimestamp);
 			foreach(@$entries) {
 				$sourcesId->{$_->{source}}->{last} = $_
 				    if defined($sourcesId->{$_->{source}});
 			}
-			return $sourcesId->{$id}->{last}
-			    if $hash && exists($sourcesId->{$id}->{last}->{timestamp});
-			return $sourcesId->{$id}->{last}->{timestamp}
-			    if exists($sourcesId->{$id}->{last}->{timestamp});
+			$self->{lastTimestamp} = $source0->{last}->{timestamp}
+			    if(defined($source0) &&
+			       defined($source0->{last}->{timestamp}));
 		} elsif(@lines == 1) {
 			my $timestamp = $lines[0];
 			chomp $timestamp;
 			if($timestamp =~ /^\d+$/) {
 				$self->{lastTimestamp} = $timestamp;
-				if($hash) {
-					return {
-						source => $self->{sources}->[0]->{id},
-						timestamp => $self->{lastTimestamp},
-						id => 0,
-						seg => 0,
-						track => 0
-					};
-				}
-				return $self->{lastTimestamp};
+				$source0->{last} = {
+					source => $source0->{id},
+					timestamp => $self->{lastTimestamp},
+					id => 0,
+					seg => 0,
+					track => 0
+				} if defined($source0);
 			}
 		}
 	}
+	return _lastTimestamp($self, $id)
+	    if defined($self->{lastTimestamp});
 	print "No valid cached timestamp.\n" if $self->{verbose};
 	readData($self);
 	updateLastTimestamp($self, $self->{lastTimestampData});
-	if($hash) {
-		return {
-			source => $self->{sources}->[0]->{id},
-			timestamp => $self->{lastTimestamp},
-			id => 0,
-			seg => 0,
-			track => 0
-		};
-	}
-	return $self->{lastTimestamp};
+	return _lastTimestamp($self, $id);
 }
 
 my $fieldsIM = [
