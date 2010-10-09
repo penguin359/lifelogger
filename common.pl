@@ -349,10 +349,11 @@ sub init {
 
 	$self->{settings} = $settings;
 	$self->{files} = $files;
-	$self->{sources} = $sources;
+	$self->{sources} = $settings->{sources};
+	$self->{sources} = $sources if !defined($self->{sources});
 
 	$self->{sourcesId} = {};
-	foreach(@$sources) {
+	foreach(@{$self->{sources}}) {
 		next if !defined($_->{id});
 		if(defined($self->{sourcesId}->{$_->{id}})) {
 			warn "Duplicate source id";

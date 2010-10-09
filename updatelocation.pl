@@ -41,10 +41,12 @@ use Data::Dumper;
 
 require 'common.pl';
 
+my $id;
 my $slow = 0;
 my $noMark = 0;
 my $verbose = 0;
 my $result = GetOptions(
+	"id=i" => \$id,
 	"slow" => \$slow,
 	"no-mark" => \$noMark,
 	"Verbose" => \$verbose);
@@ -54,22 +56,35 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
+my $source;
 my $newEntries = [];
 if(defined($ARGV[0])) {
+	die "Must specify source id with -i.\n"
+	    if !defined($id);
+	$source = $self->{sourcesId}->{$id};
+	die "Source $id is not configured.\n"
+	    if !defined($source);
 	print "Loading CSV file.\n" if $self->{verbose};
 	open(my $fd, $ARGV[0]) or die "Can't load file";
 	my @lines = <$fd>;
 	($newEntries) = parseData($self, \@lines);
 } else {
-	my $source;
-	foreach(@{$self->{sources}}) {
-		if(lc $_->{type} eq "instamapper") {
-			$source = $_;
-			last;
+	if(defined($id)) {
+		$source = $self->{sourcesId}->{$id};
+		die "Source $id is not configured.\n"
+		    if !defined($source);
+		die "Source $id is not InstaMapper.\n"
+		    if lc $source->{type} ne "instamapper";
+	} else {
+		foreach(@{$self->{sources}}) {
+			if(lc $_->{type} eq "instamapper") {
+				$source = $_;
+				last;
+			}
 		}
+		die "No InstaMapper source has been configured.\n"
+		    if !defined($source);
 	}
-	die "No InstaMapper source has been configured.\n"
-	    if !defined($source);
 	my $apiKey = $source->{apiKey};
 	my $last = lastTimestamp($self, $source->{id});
 	my $lastTimestamp = $last->{timestamp};
@@ -99,7 +114,10 @@ foreach(@$newEntries) {
 
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my @locationBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Locations']", $doc);
+my $locationPath = "/kml:kml/kml:Document/kml:Folder[kml:name='Locations']";
+my $locationId = $source->{kml}->{location};
+$locationPath = "//kml:Folder[\@id='$locationId']" if defined($locationId);
+my @locationBase = $xc->findnodes($locationPath, $doc);
 
 die "Can't find base for location" if @locationBase != 1;
 
@@ -128,14 +146,21 @@ foreach my $entry (@$newEntries) {
 	next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
 	$coordStr .= "\n$entry->{longitude},$entry->{latitude},$entry->{altitude}";
 }
-my @lineNode = $xc->findnodes('/kml:kml/kml:Document/kml:Placemark/kml:LineString/kml:coordinates/text()', $doc);
+my $linePath = "/kml:kml/kml:Document/kml:Placemark/kml:LineString/kml:coordinates/text()";
+my $lineId = $source->{kml}->{line};
+$linePath = "//kml:Placemark[\@id='$lineId']/kml:LineString/kml:coordinates/text()" if defined($lineId);
+my @lineNode = $xc->findnodes($linePath, $doc);
 $lineNode[0]->appendData($coordStr);
 
 print "Updating my location.\n" if $self->{verbose};
 my $currentPosition = pop @$newEntries;
 if(defined($currentPosition)) {
-	my $positionNode = ${$xc->findnodes("/kml:kml/kml:Document/kml:Placemark[kml:styleUrl='#position']/kml:Point/kml:coordinates/text()", $doc)}[0];
-	$positionNode->setData("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
+	my $positionPath = "/kml:kml/kml:Document/kml:Placemark[kml:styleUrl='#position']/kml:Point/kml:coordinates/text()";
+	my $positionId = $source->{kml}->{position};
+	$positionPath = "//kml:Placemark[\@id='$positionId']/kml:Point/kml:coordinates/text()" if defined($positionId);
+	my @positionNode = $xc->findnodes($positionPath, $doc);
+	warn "No position node found.\n" if @positionNode < 1;
+	$positionNode[0]->setData("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
 }
 
 saveKml($self, $doc);
