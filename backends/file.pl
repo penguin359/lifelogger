@@ -39,7 +39,7 @@ my $dataFile = "$settings->{cwd}/location.csv";
 my $timestampFile = "$settings->{cwd}/timestamp";
 
 sub parseDataIM {
-	my($self, $lines) = @_;
+	my($self, $lines, $update) = @_;
 
 	die "Missing header" if @$lines < 1;
 	my $version = shift @$lines;
@@ -115,20 +115,19 @@ sub parseDataHeaderPC {
 }
 
 sub parseDataPC {
-	my($self, $lines, $required) = @_;
+	my($self, $lines, $required, $update) = @_;
 
 	my $fields;
 	(undef, $fields, $required) = parseDataHeaderPC($self, $lines, $required);
 
-	return parseDataBody($self, $lines, $fields, $required);
+	return parseDataBody($self, $lines, $fields, $required, $update);
 }
 
 sub parseDataBody {
-	my($self, $lines, $fields, $required) = @_;
+	my($self, $lines, $fields, $required, $update) = @_;
 
 	my $line = 3;
 	my $entries = [];
-	my $update = 1;
 	my $sourcesId = $self->{sourcesId};
 	line: foreach(@$lines) {
 		chomp;
@@ -195,14 +194,14 @@ sub parseDataBody {
 }
 
 sub parseData {
-	my($self, $lines) = @_;
+	my($self, $lines, $update) = @_;
 
 	die "Missing header" if @$lines < 1;
 	my $version = @$lines[0];
 	if($version =~ "InstaMapper API") {
-		return parseDataIM($self, $lines);
+		return parseDataIM($self, $lines, $update);
 	} elsif($version =~ "PhotoCatalog") {
-		return parseDataPC($self, $lines);
+		return parseDataPC($self, $lines, undef, $update);
 	} else {
 		die "Unrecognized file";
 	}
@@ -220,13 +219,6 @@ sub updateLastTimestamp {
 
 	print "Updating last timestamp.\n" if $self->{verbose};
 	$self->{lastTimestamp} = $timestamp;
-	$self->{sources}->[0]->{last} = {
-		source => $self->{sources}->[0]->{id},
-		timestamp => $timestamp,
-		id => 0,
-		seg => 0,
-		track => 0
-	};
 	my @entries = ();
 	push @entries, _lastTimestamp($self, $_)
 	    foreach(keys %{$self->{sourcesId}});
@@ -468,21 +460,14 @@ sub readData {
 		my @lines = <$fd>;
 		close $fd;
 
-		($self->{data}, $self->{lastTimestampData}) = parseData($self, \@lines);
+		($self->{data}, $self->{lastTimestampData}) = parseData($self, \@lines, 1);
 		$data = $self->{data};
-		my $last = {
-			source => $self->{sources}->[0]->{id},
-			timestamp => $self->{lastTimestampData},
-			id => 0,
-			seg => 0,
-			track => 0
-		};
 	} else {
 		open($fd, $file) or die "Can't open data file";
 		my @lines = <$fd>;
 		close $fd;
 
-		($data) = parseData($self, \@lines);
+		($data) = parseData($self, \@lines, 0);
 	}
 
 	return $data;
