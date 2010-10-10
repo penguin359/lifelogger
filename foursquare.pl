@@ -47,7 +47,7 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
-my $rssFile = "twitter.rss";
+my $rssFile = $self->{settings}->{rssFeed};
 $rssFile = shift if @ARGV;
 
 my $doc = loadKml($self);
@@ -59,6 +59,7 @@ my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 
 die "Can't find base for twitter" if @base != 1;
 
+my $newEntries = [];
 #print "List:\n";
 foreach my $item (reverse @items) {
 	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->nodeValue;
@@ -66,6 +67,8 @@ foreach my $item (reverse @items) {
 	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->nodeValue;
 	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->nodeValue;
 	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->nodeValue;
+	my $point     = ${$xc->findnodes('georss:point/text()', $item)}[0];
+	$point        = $point->nodeValue if defined($point);
 	my $timestamp = parseDate($pubDate);
 
 	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $doc);
@@ -85,8 +88,19 @@ foreach my $item (reverse @items) {
 	$link  = escapeText($self, $link);
 
 	my $mark = createPlacemark($doc);
-	my $entry = closestEntry($self, $timestamp);
-	#addName($doc, $mark, $self->{subject});
+	my $entry = {};
+	if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
+		($entry->{latitude}, $entry->{longitude}) = ($1, $2);
+		$entry->{key} = 0;
+		$entry->{label} = 'Twitter';
+		$entry->{timestamp} = $timestamp;
+		$entry->{altitude} = '';
+		$entry->{speed} = '';
+		$entry->{heading} = '';
+		push @$newEntries, $entry;
+	} else {
+		$entry = closestEntry($self, $timestamp);
+	}
 	addName($doc, $mark, $title);
 	addDescription($doc, $mark, "<p>$descr</p><a href=\"$link\">Link</a>");
 	addTimestamp($doc, $mark, $timestamp);
@@ -95,4 +109,8 @@ foreach my $item (reverse @items) {
 	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
 	addPlacemark($doc, $base[0], $mark);
 }
+
+print "Saving location data.\n" if $self->{verbose};
+appendData($self, $newEntries);
+
 saveKml($self, $doc);
