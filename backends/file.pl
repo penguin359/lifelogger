@@ -120,11 +120,16 @@ sub parseDataPC {
 	my $fields;
 	(undef, $fields, $required) = parseDataHeaderPC($self, $lines, $required);
 
+	return parseDataBody($self, $lines, $fields, $required);
+}
+
+sub parseDataBody {
+	my($self, $lines, $fields, $required) = @_;
+
 	my $line = 3;
-	my $lastTimestamp = 0;
-	my $lastTrack = 0;
-	my $lastSeg = 0;
 	my $entries = [];
+	my $update = 1;
+	my $sourcesId = $self->{sourcesId};
 	line: foreach(@$lines) {
 		chomp;
 		my @cells = split /,/;
@@ -166,14 +171,27 @@ sub parseDataPC {
 			next;
 		}
 
-		$lastTimestamp = $entry->{timestamp}
-		    if $lastTimestamp < $entry->{timestamp};
+		if($update &&
+		   defined($entry->{source}) &&
+		   defined($sourcesId->{$entry->{source}})) {
+			my $last = _lastTimestamp($self, $entry->{source});
+			$last->{timestamp} = $entry->{timestamp}
+			    if defined($entry->{timestamp}) &&
+			       $last->{timestamp} < $entry->{timestamp};
+			$last->{id} = $entry->{id}
+			    if defined($entry->{id}) &&
+			       $last->{id} < $entry->{id};
+			$last->{seg} = $entry->{seg}
+			    if defined($entry->{seg}) &&
+			       $last->{seg} < $entry->{seg};
+			$last->{track} = $entry->{track}
+			    if defined($entry->{track}) &&
+			       $last->{track} < $entry->{track};
+		}
 		push @$entries, $entry;
 	}
-	#print Dumper($entries);
-	#exit 0;
 
-	return ($entries, $lastTimestamp);
+	return ($entries);
 }
 
 sub parseData {
@@ -335,6 +353,8 @@ sub writeEntries {
 		}
 		print $fd $line;
 	}
+
+	updateLastTimestamp($self) if $update;
 }
 
 sub writeDataIM {
@@ -348,11 +368,9 @@ sub writeDataIM {
 	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
 
 	print $fd "InstaMapper API v1.00\n";
-	my $lastTimestamp = lastTimestamp($self);
-	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsIM, $update);
+	lastTimestamp($self);
+	writeEntries($self, $fd, $entries, $fieldsIM, $update);
 	close $fd;
-
-	updateLastTimestamp($self, $lastTimestamp) if $update;
 }
 
 sub writeDataPC {
@@ -376,11 +394,9 @@ sub writeDataPC {
 	$header .= "\n";
 	print $fd "PhotoCatalog v1.0\n";
 	print $fd $header;
-	my $lastTimestamp = lastTimestamp($self);
-	$lastTimestamp = writeEntries($self, $fd, $entries, $fields, $update);
+	lastTimestamp($self);
+	writeEntries($self, $fd, $entries, $fields, $update);
 	close $fd;
-
-	updateLastTimestamp($self, $lastTimestamp) if $update;
 }
 
 sub appendDataIM {
@@ -393,11 +409,9 @@ sub appendDataIM {
 	}
 	open(my $fd, ">>", $file) or die "Can't append InstaMapper updates";
 
-	my $lastTimestamp = lastTimestamp($self);
-	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsIM, $update);
+	lastTimestamp($self);
+	writeEntries($self, $fd, $entries, $fieldsIM, $update);
 	close $fd;
-
-	updateLastTimestamp($self, $lastTimestamp) if $update;
 }
 
 sub appendDataPC {
@@ -417,11 +431,9 @@ sub appendDataPC {
 	my($fields, undef, $required) = parseDataHeaderPC($self, \@lines);
 	seek $fd, 0, SEEK_END;
 
-	my $lastTimestamp = lastTimestamp($self);
-	$lastTimestamp = writeEntries($self, $fd, $entries, $fields, $update);
+	lastTimestamp($self);
+	writeEntries($self, $fd, $entries, $fields, $update);
 	close $fd;
-
-	updateLastTimestamp($self, $lastTimestamp) if $update;
 }
 
 sub appendData {
