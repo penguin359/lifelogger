@@ -47,31 +47,36 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
-my $rssFile = $self->{settings}->{rssFeed};
-$rssFile = shift if @ARGV;
+my $fourSquareFile = $self->{settings}->{fourSquareFeed};
+$fourSquareFile = shift if @ARGV;
 
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Twitter']", $doc);
+my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='FourSquare']", $doc);
 my $parser = new XML::LibXML;
-my $rssDoc = $parser->parse_file($rssFile);
-my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
+my $fourSquareDoc = $parser->parse_file($fourSquareFile);
+my @items = $xc->findnodes('/checkins/checkin', $fourSquareDoc);
 
-die "Can't find base for twitter" if @base != 1;
+die "Can't find base for FourSquare" if @base != 1;
 
 my $newEntries = [];
 #print "List:\n";
 foreach my $item (reverse @items) {
-	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->nodeValue;
-	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->nodeValue;
-	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->nodeValue;
-	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->nodeValue;
-	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->nodeValue;
-	my $point     = ${$xc->findnodes('georss:point/text()', $item)}[0];
-	$point        = $point->nodeValue if defined($point);
-	my $timestamp = parseDate($pubDate);
+	my $id        = ${$xc->findnodes('id/text()', $item)}[0]->nodeValue;
+	my $created   = ${$xc->findnodes('created/text()', $item)}[0]->nodeValue;
+	my $name      = ${$xc->findnodes('venue/name/text()', $item)}[0];
+	next if !defined($name);
+	$name  = $name->nodeValue;
+	my $iconPath  = ${$xc->findnodes('venue/primarycategory/fullpathname/text()', $item)}[0];
+	next if !defined($iconPath);
+	$iconPath  = $iconPath->nodeValue;
+	my $iconUrl   = ${$xc->findnodes('venue/primarycategory/iconurl/text()', $item)}[0]->nodeValue;
+	my $latitude  = ${$xc->findnodes('venue/geolat/text()', $item)}[0]->nodeValue;
+	my $longitude = ${$xc->findnodes('venue/geolong/text()', $item)}[0]->nodeValue;
+	my $descr     = ${$xc->findnodes('display/text()', $item)}[0]->nodeValue;
+	my $timestamp = parseDate($created);
 
-	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $doc);
+	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='checkinId']/kml:value[text()='$id']/text()", $doc);
 	if(@guidMatches) {
 		die "Duplicate GUIDs" if @guidMatches > 1;
 		#my $kmlGuid = $guidMatches[0]->getNodeValue;
@@ -80,33 +85,50 @@ foreach my $item (reverse @items) {
 	}
 	#print "[UTF8] " if utf8::is_utf8($descr);
 	#print "[VALID] " if utf8::valid($descr);
-	#print "I: '", $descr, "' - $link - $timestamp\n";
+	print "I: '", $descr, "' - $name - $timestamp\n";
 	#next;
 
+	my $iconStyle = 'foursquare_' . $iconPath;
+	$iconStyle =~ s/:/_/g;
+	my @styleNode = $xc->findnodes("kml:Style[\@id='$iconStyle']", $doc);
+	if(@styleNode < 1) {
+		my $style = $doc->createElement('Style');
+		$style->setAttribute('id', $iconStyle);
+		my $node = $doc->createElement('IconStyle');
+		my $icon = $doc->createElement('Icon');
+		my $href = $doc->createElement('href');
+		my $url = $doc->createTextNode($iconUrl);
+		$href->appendChild($url);
+		$icon->appendChild($href);
+		$node->appendChild($icon);
+		$style->appendChild($node);
+		my $docNode = ${$xc->findnodes("/kml:kml/kml:Document", $doc)}[0];
+		$docNode->appendChild($style);
+	}
+
 	$descr = escapeText($self, $descr);
-	$guid  = escapeText($self, $guid);
-	$link  = escapeText($self, $link);
 
 	my $mark = createPlacemark($doc);
 	my $entry = {};
-	if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
-		($entry->{latitude}, $entry->{longitude}) = ($1, $2);
-		$entry->{key} = 0;
-		$entry->{label} = 'Twitter';
+	#if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
+		$entry->{latitude} = $latitude;
+		$entry->{longitude} = $longitude;
+		$entry->{key} = 1;
+		$entry->{label} = 'FourSquare';
 		$entry->{timestamp} = $timestamp;
 		$entry->{altitude} = '';
 		$entry->{speed} = '';
 		$entry->{heading} = '';
 		push @$newEntries, $entry;
-	} else {
-		$entry = closestEntry($self, $timestamp);
-	}
-	addName($doc, $mark, $title);
-	addDescription($doc, $mark, "<p>$descr</p><a href=\"$link\">Link</a>");
+	#} else {
+	#	$entry = closestEntry($self, $timestamp);
+	#}
+	addName($doc, $mark, $name);
+	addDescription($doc, $mark, "<b>$name</b><p>$descr</p>");
 	addTimestamp($doc, $mark, $timestamp);
-	addStyle($doc, $mark, 'twitter');
-	addExtendedData($doc, $mark, { guid => $guid });
-	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
+	addStyle($doc, $mark, $iconStyle);
+	addExtendedData($doc, $mark, { checkinId => $id });
+	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude});
 	addPlacemark($doc, $base[0], $mark);
 }
 
