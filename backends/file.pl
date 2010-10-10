@@ -46,46 +46,24 @@ sub parseDataIM {
 	chomp($version);
 	die "Unreconized format or version" if $version ne "InstaMapper API v1.00";
 
-	my $sources = $self->{sources};
-	my $multisource = 0;
-	$multisource = 1
-	    if @$sources > 0 ||
-	       (@$sources == 1 &&
-	        lc $sources->[0]->{type} eq "instamapper"
-		&& defined($sources->[0]->{deviceKey}));
-	my %keyToSource;
-	my $defaultSource = 1;
-	if($multisource) {
-		foreach(@$sources) {
-			$keyToSource{$_->{deviceKey}} = $_->{id}
-			    if lc $_->{type} eq "instamapper" &&
-			       defined($_->{deviceKey});
-		}
-	} else {
-		$defaultSource = $sources->[0]->{id}
-		    if defined($sources->[0]);
-	}
+	my $fields = {
+		key	  => 0,
+		label	  => 1,
+		timestamp => 2,
+		latitude  => 3,
+		longitude => 4,
+		altitude  => 5,
+		speed	  => 6,
+		heading	  => 7
+	};
+	my $required = [
+		'key',
+		'timestamp',
+		'latitude',
+		'longitude'
+	];
 
-	my $lastTimestamp = 0;
-	my $entries = [];
-	foreach(@$lines) {
-		chomp;
-		next if $_ !~ /^[[:digit:]]+,([^,]*,){6}/;
-		my $entry = {};
-		($entry->{key},      $entry->{label},     $entry->{timestamp},
-		 $entry->{latitude}, $entry->{longitude}, $entry->{altitude},
-		 $entry->{speed},    $entry->{heading})   = split /,/, $_, 8;
-		$lastTimestamp = $entry->{timestamp}
-		    if $lastTimestamp < $entry->{timestamp};
-		if($multisource) {
-			$entry->{source} = $keyToSource{$entry->{key}};
-		} else {
-			$entry->{source} = $defaultSource;
-		}
-		push @$entries, $entry;
-	}
-
-	return ($entries, $lastTimestamp);
+	return parseDataBody($self, $lines, $fields, $required, $update);
 }
 
 sub parseDataHeaderPC {
@@ -125,6 +103,31 @@ sub parseDataPC {
 
 sub parseDataBody {
 	my($self, $lines, $fields, $required, $update) = @_;
+
+	my $needSource = 0;
+	$needSource = 1 if  defined($fields->{key}) &&
+			   !defined($fields->{source});
+	my $multisource = 0;
+	my %keyToSource;
+	my $defaultSource = 1;
+	if($needSource) {
+		my $sources = $self->{sources};
+		$multisource = 1
+		    if @$sources > 0 ||
+		       (@$sources == 1 &&
+			lc $sources->[0]->{type} eq "instamapper" &&
+			defined($sources->[0]->{deviceKey}));
+		if($multisource) {
+			foreach(@$sources) {
+				$keyToSource{$_->{deviceKey}} = $_->{id}
+				    if lc $_->{type} eq "instamapper" &&
+				       defined($_->{deviceKey});
+			}
+		} else {
+			$defaultSource = $sources->[0]->{id}
+			    if defined($sources->[0]);
+		}
+	}
 
 	my $line = 3;
 	my $entries = [];
@@ -170,6 +173,14 @@ sub parseDataBody {
 			next;
 		}
 
+		if($needSource) {
+			if($multisource) {
+				$entry->{source} = $keyToSource{$entry->{key}};
+			} else {
+				$entry->{source} = $defaultSource;
+			}
+		}
+
 		if($update &&
 		   defined($entry->{source}) &&
 		   defined($sourcesId->{$entry->{source}})) {
@@ -187,6 +198,7 @@ sub parseDataBody {
 			    if defined($entry->{track}) &&
 			       $last->{track} < $entry->{track};
 		}
+
 		push @$entries, $entry;
 	}
 
@@ -218,6 +230,7 @@ sub updateLastTimestamp {
 	my($self, $timestamp) = @_;
 
 	print "Updating last timestamp.\n" if $self->{verbose};
+	$timestamp = 0 if !defined($timestamp);
 	$self->{lastTimestamp} = $timestamp;
 	my @entries = ();
 	push @entries, _lastTimestamp($self, $_)
@@ -237,6 +250,7 @@ sub _lastTimestamp {
 	my $source = $self->{sourcesId}->{$id};
 	die "Source $id not configured" if !defined($source);
 
+	$source->{last} = {} if !defined($source->{last});
 	my $last = $source->{last};
 	$last->{source}	   = $id;
 	$last->{timestamp} = 0 if !defined($last->{timestamp});
