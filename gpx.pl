@@ -80,7 +80,7 @@ foreach(@tracks) {
 			$entry->{id}        = $id;
 			$entry->{seg}       = $seg;
 			$entry->{track}     = $track;
-			$entry->{key}       = $source;
+			$entry->{source}    = $source;
 			$entry->{label}     = $name;
 			$entry->{latitude}  = checkNode($xc, '@lat', $_);
 			$entry->{longitude} = checkNode($xc, '@lon', $_);

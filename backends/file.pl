@@ -46,6 +46,26 @@ sub parseDataIM {
 	chomp($version);
 	die "Unreconized format or version" if $version ne "InstaMapper API v1.00";
 
+	my $sources = $self->{sources};
+	my $multisource = 0;
+	$multisource = 1
+	    if @$sources > 0 ||
+	       (@$sources == 1 &&
+	        lc $sources->[0]->{type} eq "instamapper"
+		&& defined($sources->[0]->{deviceKey}));
+	my %keyToSource;
+	my $defaultSource = 1;
+	if($multisource) {
+		foreach(@$sources) {
+			$keyToSource{$_->{deviceKey}} = $_->{id}
+			    if lc $_->{type} eq "instamapper" &&
+			       defined($_->{deviceKey});
+		}
+	} else {
+		$defaultSource = $sources->[0]->{id}
+		    if defined($sources->[0]);
+	}
+
 	my $lastTimestamp = 0;
 	my $entries = [];
 	foreach(@$lines) {
@@ -57,6 +77,11 @@ sub parseDataIM {
 		 $entry->{speed},    $entry->{heading})   = split /,/, $_, 8;
 		$lastTimestamp = $entry->{timestamp}
 		    if $lastTimestamp < $entry->{timestamp};
+		if($multisource) {
+			$entry->{source} = $keyToSource{$entry->{key}};
+		} else {
+			$entry->{source} = $defaultSource;
+		}
 		push @$entries, $entry;
 	}
 
@@ -79,7 +104,8 @@ sub parseDataHeaderPC {
 		$fields{$fields[$i]} = $i;
 	}
 
-	$required = ['timestamp', 'latitude', 'longitude'] if !defined($required);
+	$required = ['source', 'timestamp', 'latitude', 'longitude']
+	    if !defined($required);
 	foreach(@$required) {
 		die "Missing required field $_" if !defined($fields{$_});
 	}
@@ -266,7 +292,7 @@ my $fieldsIM = [
     "heading"];
 
 my $fieldsPC = [
-    "key",
+    "source",
     "id",
     "seg",
     "track",
@@ -278,8 +304,9 @@ my $fieldsPC = [
     "heading"];
 
 sub writeEntries {
-	my($self, $fd, $entries, $fields, $lastTimestamp) = @_;
+	my($self, $fd, $entries, $fields, $update) = @_;
 
+	my $sourcesId = $self->{sourcesId};
 	foreach my $entry (@$entries) {
 		my $line = "";
 		my $first = 1;
@@ -289,14 +316,25 @@ sub writeEntries {
 			$first = 0;
 		}
 		$line .= "\n";
-		$lastTimestamp = $entry->{timestamp}
-		    if defined($lastTimestamp) &&
-		       defined($entry->{timestamp}) &&
-		       $lastTimestamp < $entry->{timestamp};
+		if($update &&
+		   defined($entry->{source}) &&
+		   defined($sourcesId->{$entry->{source}})) {
+			my $last = _lastTimestamp($self, $entry->{source});
+			$last->{timestamp} = $entry->{timestamp}
+			    if defined($entry->{timestamp}) &&
+			       $last->{timestamp} < $entry->{timestamp};
+			$last->{id} = $entry->{id}
+			    if defined($entry->{id}) &&
+			       $last->{id} < $entry->{id};
+			$last->{seg} = $entry->{seg}
+			    if defined($entry->{seg}) &&
+			       $last->{seg} < $entry->{seg};
+			$last->{track} = $entry->{track}
+			    if defined($entry->{track}) &&
+			       $last->{track} < $entry->{track};
+		}
 		print $fd $line;
 	}
-
-	return $lastTimestamp;
 }
 
 sub writeDataIM {
@@ -311,7 +349,7 @@ sub writeDataIM {
 
 	print $fd "InstaMapper API v1.00\n";
 	my $lastTimestamp = lastTimestamp($self);
-	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsIM, $lastTimestamp);
+	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsIM, $update);
 	close $fd;
 
 	updateLastTimestamp($self, $lastTimestamp) if $update;
@@ -339,7 +377,7 @@ sub writeDataPC {
 	print $fd "PhotoCatalog v1.0\n";
 	print $fd $header;
 	my $lastTimestamp = lastTimestamp($self);
-	$lastTimestamp = writeEntries($self, $fd, $entries, $fields, $lastTimestamp);
+	$lastTimestamp = writeEntries($self, $fd, $entries, $fields, $update);
 	close $fd;
 
 	updateLastTimestamp($self, $lastTimestamp) if $update;
@@ -356,7 +394,7 @@ sub appendDataIM {
 	open(my $fd, ">>", $file) or die "Can't append InstaMapper updates";
 
 	my $lastTimestamp = lastTimestamp($self);
-	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsIM, $lastTimestamp);
+	$lastTimestamp = writeEntries($self, $fd, $entries, $fieldsIM, $update);
 	close $fd;
 
 	updateLastTimestamp($self, $lastTimestamp) if $update;
@@ -380,7 +418,7 @@ sub appendDataPC {
 	seek $fd, 0, SEEK_END;
 
 	my $lastTimestamp = lastTimestamp($self);
-	$lastTimestamp = writeEntries($self, $fd, $entries, $fields, $lastTimestamp);
+	$lastTimestamp = writeEntries($self, $fd, $entries, $fields, $update);
 	close $fd;
 
 	updateLastTimestamp($self, $lastTimestamp) if $update;
