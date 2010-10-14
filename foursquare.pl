@@ -59,39 +59,75 @@ my @items = $xc->findnodes('/checkins/checkin', $fourSquareDoc);
 
 die "Can't find base for FourSquare" if @base != 1;
 
-my $newEntries = [];
-#print "List:\n";
-foreach my $item (reverse @items) {
-	my $id        = ${$xc->findnodes('id/text()', $item)}[0]->nodeValue;
-	my $created   = ${$xc->findnodes('created/text()', $item)}[0]->nodeValue;
-	my $name      = ${$xc->findnodes('venue/name/text()', $item)}[0];
-	next if !defined($name);
-	$name  = $name->nodeValue;
-	my $iconPath  = ${$xc->findnodes('venue/primarycategory/fullpathname/text()', $item)}[0];
-	next if !defined($iconPath);
-	$iconPath  = $iconPath->nodeValue;
-	my $iconUrl   = ${$xc->findnodes('venue/primarycategory/iconurl/text()', $item)}[0]->nodeValue;
-	my $latitude  = ${$xc->findnodes('venue/geolat/text()', $item)}[0]->nodeValue;
-	my $longitude = ${$xc->findnodes('venue/geolong/text()', $item)}[0]->nodeValue;
-	my $descr     = ${$xc->findnodes('display/text()', $item)}[0]->nodeValue;
-	my $timestamp = parseDate($created);
+sub getNode {
+	my($xc, $node, $path) = @_;
 
-	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='checkinId']/kml:value[text()='$id']/text()", $doc);
+	my @nodeList = $xc->findnodes($path, $node);
+	warn "Multiple nodes for '$path' on " . $node->nodeName
+	    if @nodeList > 1;
+	return $nodeList[0] if @nodeList == 1;
+	return;
+}
+
+sub getTextNode {
+	my($xc, $node, $path) = @_;
+
+	$node = getNode($xc, $node, $path . "/text()");
+	return $node->nodeValue if defined($node);
+	return;
+}
+
+my $newEntries = [];
+my %style;
+print "List:\n" if $self->{verbose};
+foreach my $item (reverse @items) {
+	my $id        = getTextNode($xc, $item, 'id');
+	my $created   = getTextNode($xc, $item, 'created');
+	my $venue     = getNode($xc, $item, 'venue');
+	my $shout     = getTextNode($xc, $item, 'shout');
+	my $name;
+	my $iconPath  = 'None';
+	my $iconUrl   = 'http://foursquare.com/img/categories/none.png';
+	my $latitude;
+	my $longitude;
+	my $altitude;
+	if($venue) {
+		$name      = getTextNode($xc, $venue, 'name');
+		my $category = getNode($xc, $venue, 'primarycategory');
+		if($category) {
+			$iconPath  = getTextNode($xc, $category, 'fullpathname');
+			$iconUrl   = getTextNode($xc, $category, 'iconurl');
+		}
+		$latitude  = getTextNode($xc, $venue, 'geolat');
+		$longitude = getTextNode($xc, $venue, 'geolong');
+		$altitude = getTextNode($xc, $venue, 'geoalt');
+	} else { die "Shout!" }
+	my $display     = getTextNode($xc, $item, 'display');
+	if(!defined($created)) {
+		warn "FourSquare check-in with missing created time";
+		next;
+	}
+	my $timestamp = parseDate($created);
+	my $descr = $shout;
+
+	my @guidMatches = $xc->findnodes("kml:Placemark/kml:ExtendedData/kml:Data[\@name='checkinId']/kml:value[text()='$id']/text()", $base[0]);
 	if(@guidMatches) {
 		die "Duplicate GUIDs" if @guidMatches > 1;
 		#my $kmlGuid = $guidMatches[0]->getNodeValue;
 		#print "Matching GUID: '$kmlGuid'\n";
 		next;
 	}
-	#print "[UTF8] " if utf8::is_utf8($descr);
-	#print "[VALID] " if utf8::valid($descr);
-	print "I: '", $descr, "' - $name - $timestamp\n";
+	my $descrTest = $descr;
+	$descrTest = '' if !defined($descrTest);
+	#print "[UTF8] " if utf8::is_utf8($descrTest);
+	#print "[VALID] " if utf8::valid($descrTest);
+	print "I: '", $descrTest, "' - $name - $timestamp\n" if $self->{verbose};
 	#next;
 
 	my $iconStyle = 'foursquare_' . $iconPath;
-	$iconStyle =~ s/:/_/g;
-	my @styleNode = $xc->findnodes("kml:Style[\@id='$iconStyle']", $doc);
-	if(@styleNode < 1) {
+	$iconStyle =~ s/[^[:alnum:]]/_/g;
+	my @styleNode = $xc->findnodes("//kml:Style[\@id='$iconStyle']", $doc);
+	if(!defined($style{$iconStyle}) && @styleNode < 1) {
 		my $style = $doc->createElement('Style');
 		$style->setAttribute('id', $iconStyle);
 		my $node = $doc->createElement('IconStyle');
@@ -104,27 +140,35 @@ foreach my $item (reverse @items) {
 		$style->appendChild($node);
 		my $docNode = ${$xc->findnodes("/kml:kml/kml:Document", $doc)}[0];
 		$docNode->appendChild($style);
+		my $textNode = $doc->createTextNode("\n");
+		$docNode->appendChild($textNode);
+		$style{$iconStyle} = 1;
+	} elsif(@styleNode > 1) {
+		warn "Duplicate style node '$iconStyle'\n";
 	}
-
-	$descr = escapeText($self, $descr);
 
 	my $mark = createPlacemark($doc);
 	my $entry = {};
-	#if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
+	if(defined($latitude) && defined($longitude)) {
 		$entry->{latitude} = $latitude;
 		$entry->{longitude} = $longitude;
 		$entry->{key} = 1;
 		$entry->{label} = 'FourSquare';
 		$entry->{timestamp} = $timestamp;
-		$entry->{altitude} = '';
+		$entry->{altitude} = $altitude;
 		$entry->{speed} = '';
 		$entry->{heading} = '';
+		$entry->{altitude} = '' if !defined($entry->{altitude});
 		push @$newEntries, $entry;
-	#} else {
-	#	$entry = closestEntry($self, $timestamp);
-	#}
+	} else {
+		$entry = closestEntry($self, $timestamp);
+	}
 	addName($doc, $mark, $name);
-	addDescription($doc, $mark, "<b>$name</b><p>$descr</p>");
+	$name = escapeText($self, $name);
+	$descr = escapeText($self, $descr) if defined($descr);
+	my $fullDescription = "<p><b>$name</b></p>";
+	$fullDescription .= "<p>$descr</p>" if defined($descr);
+	addDescription($doc, $mark, $fullDescription);
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, $iconStyle);
 	addExtendedData($doc, $mark, { checkinId => $id });
