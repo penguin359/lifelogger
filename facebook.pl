@@ -33,7 +33,7 @@ use warnings;
 use strict;
 
 #use utf8;
-#use open ':utf8', ':std';
+use open ':utf8', ':std';
 use Getopt::Long;
 use File::Basename;
 use LWP::UserAgent;
@@ -69,7 +69,6 @@ sub getTextNode {
 	my($xc, $node, $path) = @_;
 
 	$node = getNode($xc, $node, $path . "/text()");
-	#print Dumper($node);
 	return $node->nodeValue if defined($node);
 	return;
 }
@@ -77,29 +76,18 @@ sub getTextNode {
 sub postGraph {
 	my($ua, $token, $type, $id, $vars) = @_;
 
+	# This works around a bug where multipart/form-data becomes garbled
+	# over HTTPS when UTF-8 strings are used.
+	foreach($token, @$vars) {
+		#utf8::encode($_) if utf8::is_utf8($_);
+	}
 	my $json = new JSON;
 	my $req = POST "https://graph.facebook.com/$id/$type",
 		    Content_Type => 'form-data',
 		    Content      => [ access_token => $token,
 				      @$vars
 				    ];
-	#
-	#print "curl ";
-	#my %pass = ( access_token => $token, @$vars );
-	#foreach(keys %pass) {
-	#	if(ref $pass{$_}) {
-	#		print "-F '$_=\@$pass{$_}->[0]' ";
-	#	} else {
-	#		print "-F '$_=$pass{$_}' ";
-	#	}
-	#}
-	#print "https://graph.facebook.com/$id/$type\n";
-	#print "https://graph.facebook.com/$id/$type";
-	#print Dumper($vars);
-	#print Dumper($req);
-	#exit 0;
 	my $resp = $ua->request($req);
-	#print Dumper($resp);
 	if(!$resp->is_success) {
 		my $obj = $json->jsonToObj($resp->content);
 		die "Bad request: Failed to issue $type request: ".$obj->{error}->{type} . ".\n" . $obj->{error}->{message}
@@ -118,21 +106,10 @@ sub postPhoto {
 	my($ua, $token, $title, $descr, $file) = @_;
 
 	my $albumId = 1;
-	#print "F: '$file'\n";
-	open(my $fd, '<:bytes', $file) or die "No image: $!";
-	binmode($fd);
-	my @lines = <$fd>;
-	my $cont = join '', @lines;
-	close $fd;
-	open($fd, '>:bytes', 'temp.jpg') or die "No out file: $!";
-	print $fd $cont;
-	close $fd;
-	#my $photoObj = postGraph($ua, $token, 'photos', $albumId, [ message => $title, source => [ undef, 'image.jpg', Content => $cont ] ]);
 	utf8::encode($title);
 	utf8::encode($file);
 	my $photoObj = postGraph($ua, $token, 'photos', $albumId, [ message => $title, source => [ $file ] ]);
 	my $photoId = $photoObj->{id};
-	#my $photoId = $albumId;
 	postGraph($ua, $token, 'comments', $photoId, [ message => $descr ])
 	    if defined($photoId) && $descr;
 }
@@ -142,15 +119,14 @@ my $parser = new XML::LibXML;
 my $settingsDoc = $parser->parse_file("facebook.xml");
 
 my $token = getTextNode($xc, $settingsDoc, '/settings/sources/source/accessToken');
-utf8::encode($token);
 print "Token: '", $token, "'\n";
+utf8::encode($token);
 
 my $doc = loadKml($self);
 my @placemarks = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Photos']/kml:Placemark", $doc);
 
 my $ua = new LWP::UserAgent agent => 'PhotoCatalog/0.01', cookie_jar => new HTTP::Cookies;
 foreach(@placemarks) {
-	#print Dumper($_);
 	my $name = getTextNode($xc, $_, 'kml:name');
 	my $fullDescr = getTextNode($xc, $_, 'kml:description');
 	$fullDescr =~ s@^<p><b>[^<]*</b></p>@@;
@@ -162,6 +138,7 @@ foreach(@placemarks) {
 	$descr =~ s@&gt;@>@g;
 	$descr =~ s@&amp;@\&@g;
 	$descr =~ s@&#39;@'@g;  # Undo an accidental double-escape
+	$descr =~ s@^[[:space:]]*@@;
 	$descr =~ s@[[:space:]]*$@@;
 	$fullDescr =~ m@<img src="http://.*/images/160/([^"]*)"@;
 	my $img = '/home/user/public_html/photocatalog/images/' . $1;
@@ -171,7 +148,6 @@ foreach(@placemarks) {
 	print "Name: '", $name, "'\n";
 	print "Description: '", $descr, "'\n";
 	print "Image: '", $img, "'\n";
-	#$img = basename($img);
 	postPhoto($ua, $token, $name, $descr, $img)
 	#print "Image: '", $dir, "', '", $file, "'\n";
 	#next if !$descr;
