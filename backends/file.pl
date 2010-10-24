@@ -38,8 +38,36 @@ use Fcntl qw(:seek);
 my $dataFile = "$settings->{cwd}/location.csv";
 my $timestampFile = "$settings->{cwd}/timestamp";
 
+sub parseDataIM {
+	my($self, $lines, $update) = @_;
+
+	die "Missing header" if @$lines < 1;
+	my $version = shift @$lines;
+	chomp($version);
+	die "Unreconized format or version" if $version ne "InstaMapper API v1.00";
+
+	my $fields = {
+		key	  => 0,
+		label	  => 1,
+		timestamp => 2,
+		latitude  => 3,
+		longitude => 4,
+		altitude  => 5,
+		speed	  => 6,
+		heading	  => 7
+	};
+	my $required = [
+		'key',
+		'timestamp',
+		'latitude',
+		'longitude'
+	];
+
+	return parseDataBody($self, $lines, $fields, $required, $update);
+}
+
 sub parseDataHeaderPC {
-	my($self, $lines) = @_;
+	my($self, $lines, $required) = @_;
 
 	die "Missing header" if @$lines < 2;
 	my $version = shift @$lines;
@@ -54,24 +82,56 @@ sub parseDataHeaderPC {
 		$fields{$fields[$i]} = $i;
 	}
 
-	my @required = ('timestamp', 'latitude', 'longitude');
-	foreach(@required) {
+	$required = ['source', 'timestamp', 'latitude', 'longitude']
+	    if !defined($required);
+	foreach(@$required) {
 		die "Missing required field $_" if !defined($fields{$_});
 	}
-	push @required, 'id' if defined($fields{id});
+	push @$required, 'id' if defined($fields{id});
 
-	return(\@fields, \%fields, \@required);
+	return(\@fields, \%fields, $required);
 }
 
 sub parseDataPC {
-	my($self, $lines) = @_;
+	my($self, $lines, $required, $update) = @_;
 
-	my(undef, $fields, $required) = parseDataHeaderPC($self, $lines);
+	my $fields;
+	(undef, $fields, $required) = parseDataHeaderPC($self, $lines, $required);
 
-	#print Dumper($fields, $required);
+	return parseDataBody($self, $lines, $fields, $required, $update);
+}
+
+sub parseDataBody {
+	my($self, $lines, $fields, $required, $update) = @_;
+
+	my $needSource = 0;
+	$needSource = 1 if  defined($fields->{key}) &&
+			   !defined($fields->{source});
+	my $multisource = 0;
+	my %keyToSource;
+	my $defaultSource = 1;
+	if($needSource) {
+		my $sources = $self->{sources};
+		$multisource = 1
+		    if @$sources > 0 ||
+		       (@$sources == 1 &&
+			lc $sources->[0]->{type} eq "instamapper" &&
+			defined($sources->[0]->{deviceKey}));
+		if($multisource) {
+			foreach(@$sources) {
+				$keyToSource{$_->{deviceKey}} = $_->{id}
+				    if lc $_->{type} eq "instamapper" &&
+				       defined($_->{deviceKey});
+			}
+		} else {
+			$defaultSource = $sources->[0]->{id}
+			    if defined($sources->[0]);
+		}
+	}
+
 	my $line = 3;
-	my $lastTimestamp = 0;
 	my $entries = [];
+	my $sourcesId = $self->{sourcesId};
 	line: foreach(@$lines) {
 		chomp;
 		my @cells = split /,/;
@@ -90,148 +150,187 @@ sub parseDataPC {
 				next line;
 			}
 		}
-		if($entry->{id} !~ /^\s*\d+\s*$/) {
+		if(defined($entry->{id}) &&
+		   $entry->{id} !~ /^\s*\d+\s*$/) {
 			warn "Bad id on line ", $line-1, "\n";
 			next;
 		}
-		if($entry->{timestamp} !~ /^\s*\d+\s*$/) {
+		if(defined($entry->{timestamp}) &&
+		   $entry->{timestamp} !~ /^\s*\d+\s*$/) {
 			warn "Bad timestamp on line ", $line-1, "\n";
 			next;
 		}
-		if($entry->{latitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
-		   $entry->{latitude} < -90 || $entry->{latitude} > 90) {
+		if(defined($entry->{latitude}) &&
+		   ($entry->{latitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
+		    $entry->{latitude} < -90 || $entry->{latitude} > 90)) {
 			warn "Bad latitude on line ", $line-1, "\n";
 			next;
 		}
-		if($entry->{longitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
-		   $entry->{longitude} < -180 || $entry->{longitude} > 180) {
+		if(defined($entry->{longitude}) &&
+		   ($entry->{longitude} !~ /^\s*-?\d+(.\d*)?\s*$/ ||
+		    $entry->{longitude} < -180 || $entry->{longitude} > 180)) {
 			warn "Bad longitude on line ", $line-1, "\n";
 			next;
 		}
 
-		$lastTimestamp = $entry->{timestamp}
-		    if $lastTimestamp < $entry->{timestamp};
-		push @$entries, $entry;
-	}
-	#print Dumper($entries);
-	#exit 0;
+		if($needSource) {
+			if($multisource) {
+				$entry->{source} = $keyToSource{$entry->{key}};
+			} else {
+				$entry->{source} = $defaultSource;
+			}
+		}
 
-	return ($entries, $lastTimestamp);
-}
+		if($update &&
+		   defined($entry->{source}) &&
+		   defined($sourcesId->{$entry->{source}})) {
+			my $last = _lastTimestamp($self, $entry->{source});
+			$last->{timestamp} = $entry->{timestamp}
+			    if defined($entry->{timestamp}) &&
+			       $last->{timestamp} < $entry->{timestamp};
+			$last->{id} = $entry->{id}
+			    if defined($entry->{id}) &&
+			       $last->{id} < $entry->{id};
+			$last->{seg} = $entry->{seg}
+			    if defined($entry->{seg}) &&
+			       $last->{seg} < $entry->{seg};
+			$last->{track} = $entry->{track}
+			    if defined($entry->{track}) &&
+			       $last->{track} < $entry->{track};
+		}
 
-sub parseDataIM {
-	my($self, $lines) = @_;
-
-	die "Missing header" if @$lines < 1;
-	my $version = shift @$lines;
-	chomp($version);
-	die "Unreconized format or version" if $version ne "InstaMapper API v1.00";
-
-	my $lastTimestamp = 0;
-	my $entries = [];
-	foreach(@$lines) {
-		chomp;
-		next if $_ !~ /^[[:digit:]]+,([^,]*,){6}/;
-		my $entry = {};
-		($entry->{key},      $entry->{label},     $entry->{timestamp},
-		 $entry->{latitude}, $entry->{longitude}, $entry->{altitude},
-		 $entry->{speed},    $entry->{heading})   = split /,/, $_, 8;
-		$lastTimestamp = $entry->{timestamp}
-		    if $lastTimestamp < $entry->{timestamp};
 		push @$entries, $entry;
 	}
 
-	return ($entries, $lastTimestamp);
+	return ($entries);
 }
 
 sub parseData {
-	my($self, $lines) = @_;
+	my($self, $lines, $update) = @_;
 
 	die "Missing header" if @$lines < 1;
 	my $version = @$lines[0];
 	if($version =~ "InstaMapper API") {
-		return parseDataIM($self, $lines);
+		return parseDataIM($self, $lines, $update);
 	} elsif($version =~ "PhotoCatalog") {
-		return parseDataPC($self, $lines);
+		return parseDataPC($self, $lines, undef, $update);
 	} else {
 		die "Unrecognized file";
 	}
 }
 
+my $fieldsTimestamp = [
+    "source",
+    "timestamp",
+    "id",
+    "seg",
+    "track"];
+
 sub updateLastTimestamp {
 	my($self, $timestamp) = @_;
 
-	print "Saving timestamp: '$timestamp'\n" if $self->{verbose};
+	print "Updating last timestamp.\n" if $self->{verbose};
+	$timestamp = 0 if !defined($timestamp);
 	$self->{lastTimestamp} = $timestamp;
-	open(my $fd, ">$timestampFile") or return;
-	print $fd "$timestamp\n";
-	close $fd;
-	print "Success\n" if $self->{verbose};
+	my @entries = ();
+	push @entries, _lastTimestamp($self, $_)
+	    foreach(keys %{$self->{sourcesId}});
+	writeDataPC($self, \@entries, $timestampFile, $fieldsTimestamp);
+}
+
+sub _lastTimestamp {
+	my($self, $id) = @_;
+
+	if(!defined($id)) {
+		return $self->{lastTimestamp}
+		    if defined($self->{lastTimestamp});
+		return 0;
+	}
+
+	my $source = $self->{sourcesId}->{$id};
+	die "Source $id not configured" if !defined($source);
+
+	$source->{last} = {} if !defined($source->{last});
+	my $last = $source->{last};
+	$last->{source}	   = $id;
+	$last->{timestamp} = 0 if !defined($last->{timestamp});
+	$last->{id}	   = 0 if !defined($last->{id});
+	$last->{seg}	   = 0 if !defined($last->{seg});
+	$last->{track}	   = 0 if !defined($last->{track});
+
+	return $last;
 }
 
 sub lastTimestamp {
-	my($self) = @_;
+	my($self, $id) = @_;
 
-	return $self->{sources}->[0]->{lastTimestamp} if exists($self->{sources}->[0]->{lastTimestamp});
-	return $self->{lastTimestamp} if exists($self->{lastTimestamp});
-	if(open(my $fd, $timestampFile)) {
-		my $timestamp = <$fd>;
+	my $sourcesId = $self->{sourcesId};
+	my $source0 = $self->{sources}->[0];
+
+	# Check if specific id declared.
+	return _lastTimestamp($self, $id)
+	    if defined($self->{lastTimestamp});
+	if(open(my $fd, "<", $timestampFile)) {
+		my @lines = <$fd>;
 		close $fd;
-		chomp $timestamp;
-		if($timestamp =~ /^\d+$/) {
-			$self->{lastTimestamp} = $timestamp;
-			return $self->{lastTimestamp};
+		if(@lines > 1) {
+			my($entries) = parseDataPC($self, \@lines, $fieldsTimestamp);
+			foreach(@$entries) {
+				$sourcesId->{$_->{source}}->{last} = $_
+				    if defined($sourcesId->{$_->{source}});
+			}
+			$self->{lastTimestamp} = $source0->{last}->{timestamp}
+			    if(defined($source0) &&
+			       defined($source0->{last}->{timestamp}));
+		} elsif(@lines == 1) {
+			my $timestamp = $lines[0];
+			chomp $timestamp;
+			if($timestamp =~ /^\d+$/) {
+				$self->{lastTimestamp} = $timestamp;
+				$source0->{last} = {
+					source => $source0->{id},
+					timestamp => $self->{lastTimestamp},
+					id => 0,
+					seg => 0,
+					track => 0
+				} if defined($source0);
+			}
 		}
 	}
-	loadData($self);
+	return _lastTimestamp($self, $id)
+	    if defined($self->{lastTimestamp});
+	print "No valid cached timestamp.\n" if $self->{verbose};
+	readData($self);
 	updateLastTimestamp($self, $self->{lastTimestampData});
-	return $self->{lastTimestamp};
+	return _lastTimestamp($self, $id);
 }
 
-sub writeDataFile {
-	my($self, $entries, $file) = @_;
+my $fieldsIM = [
+    "key",
+    "label",
+    "timestamp",
+    "latitude",
+    "longitude",
+    "altitude",
+    "speed",
+    "heading"];
 
-	my $str = "InstaMapper API v1.00\n";
-	foreach my $entry (@$entries) {
-		$str .= "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
-	}
+my $fieldsPC = [
+    "source",
+    "id",
+    "seg",
+    "track",
+    "timestamp",
+    "latitude",
+    "longitude",
+    "altitude",
+    "speed",
+    "heading"];
 
-	open(my $fd, ">$file") or die "Can't Write InstaMapper updates";
-	print $fd $str;
-	close $fd;
-}
+sub writeEntries {
+	my($self, $fd, $entries, $fields, $update) = @_;
 
-sub writeData {
-	my($self, $entries) = @_;
-
-	my $str = "InstaMapper API v1.00\n";
-	my $lastTimestamp = lastTimestamp($self);
-	foreach my $entry (@$entries) {
-		$str .= "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
-		$lastTimestamp = $entry->{timestamp}
-		    if $lastTimestamp < $entry->{timestamp};
-	}
-
-	open(my $fd, ">$dataFile") or die "Can't Write InstaMapper updates";
-	print $fd $str;
-	close $fd;
-
-	updateLastTimestamp($self, $lastTimestamp);
-}
-
-sub appendDataPC {
-	my($self, $entries) = @_;
-
-	open(my $fd, "+<", $dataFile) or die "Can't append PhotoCatalog updates";
-
-	# Grab first two lines of file and parse
-	my @lines = ();
-	push @lines, $_ if defined($_ = <$fd>);
-	push @lines, $_ if defined($_ = <$fd>);
-	my($fields, undef, $required) = parseDataHeaderPC($self, \@lines);
-	seek $fd, 0, SEEK_END;
-
-	my $lastTimestamp = lastTimestamp($self);
+	my $sourcesId = $self->{sourcesId};
 	foreach my $entry (@$entries) {
 		my $line = "";
 		my $first = 1;
@@ -241,86 +340,157 @@ sub appendDataPC {
 			$first = 0;
 		}
 		$line .= "\n";
-		$lastTimestamp = $entry->{timestamp}
-		    if defined($entry->{timestamp}) &&
-		       $lastTimestamp < $entry->{timestamp};
+		if($update &&
+		   defined($entry->{source}) &&
+		   defined($sourcesId->{$entry->{source}})) {
+			my $last = _lastTimestamp($self, $entry->{source});
+			$last->{timestamp} = $entry->{timestamp}
+			    if defined($entry->{timestamp}) &&
+			       $last->{timestamp} < $entry->{timestamp};
+			$last->{id} = $entry->{id}
+			    if defined($entry->{id}) &&
+			       $last->{id} < $entry->{id};
+			$last->{seg} = $entry->{seg}
+			    if defined($entry->{seg}) &&
+			       $last->{seg} < $entry->{seg};
+			$last->{track} = $entry->{track}
+			    if defined($entry->{track}) &&
+			       $last->{track} < $entry->{track};
+		}
 		print $fd $line;
 	}
 
-	close $fd;
+	updateLastTimestamp($self) if $update;
+}
 
-	#updateLastTimestamp($self, $lastTimestamp);
+sub writeDataIM {
+	my($self, $entries, $file) = @_;
+
+	my $update = 0;
+	if(!defined($file)) {
+		$file = $dataFile;
+		$update = 1;
+	}
+	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
+
+	print $fd "InstaMapper API v1.00\n";
+	lastTimestamp($self);
+	writeEntries($self, $fd, $entries, $fieldsIM, $update);
+	close $fd;
+}
+
+sub writeDataPC {
+	my($self, $entries, $file, $fields) = @_;
+
+	my $update = 0;
+	if(!defined($file)) {
+		$file = $dataFile;
+		$update = 1;
+	}
+	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
+
+	$fields = $fieldsPC if !defined($fields);
+	my $header = "";
+	my $first = 1;
+	foreach(@$fields) {
+		$header .= "," if !$first;
+		$header .= $_;
+		$first = 0;
+	}
+	$header .= "\n";
+	print $fd "PhotoCatalog v1.0\n";
+	print $fd $header;
+	lastTimestamp($self);
+	writeEntries($self, $fd, $entries, $fields, $update);
+	close $fd;
 }
 
 sub appendDataIM {
-	my($self, $entries) = @_;
+	my($self, $entries, $file) = @_;
 
-	open(my $fd, "+<", $dataFile) or die "Can't append InstaMapper updates";
+	my $update = 0;
+	if(!defined($file)) {
+		$file = $dataFile;
+		$update = 1;
+	}
+	open(my $fd, ">>", $file) or die "Can't append InstaMapper updates";
+
+	lastTimestamp($self);
+	writeEntries($self, $fd, $entries, $fieldsIM, $update);
+	close $fd;
+}
+
+sub appendDataPC {
+	my($self, $entries, $file) = @_;
+
+	my $update = 0;
+	if(!defined($file)) {
+		$file = $dataFile;
+		$update = 1;
+	}
+	open(my $fd, "+<", $file) or die "Can't append PhotoCatalog updates";
+
+	# Grab first two lines of file and parse
+	my @lines = ();
+	push @lines, $_ if defined($_ = <$fd>);
+	push @lines, $_ if defined($_ = <$fd>);
+	my($fields, undef, $required) = parseDataHeaderPC($self, \@lines);
 	seek $fd, 0, SEEK_END;
 
-	my $lastTimestamp = lastTimestamp($self);
-	print "Last timestamp was: '$lastTimestamp'\n" if $self->{verbose};
-	foreach my $entry (@$entries) {
-		print $fd "$entry->{key},$entry->{label},$entry->{timestamp},$entry->{latitude},$entry->{longitude},$entry->{altitude},$entry->{speed},$entry->{heading}\n";
-		$lastTimestamp = $entry->{timestamp}
-		    if defined($entry->{timestamp}) &&
-		       $lastTimestamp < $entry->{timestamp};
-	}
-	print "Last timestamp now is: '$lastTimestamp'\n" if $self->{verbose};
-
+	lastTimestamp($self);
+	writeEntries($self, $fd, $entries, $fields, $update);
 	close $fd;
-
-	updateLastTimestamp($self, $lastTimestamp);
 }
 
 sub appendData {
-	my($self, $entries) = @_;
+	my($self, $entries, $file) = @_;
 
-	open(my $fd, "<", $dataFile) or die "Can't append updates";
+	my $appendFile = $file;
+	$appendFile = $dataFile if !defined($appendFile);
+	open(my $fd, "<", $appendFile) or die "Can't append updates";
 
 	my $version = <$fd>;
 	close $fd;
 
 	die "Missing header for updates" if !defined($version);
 	if($version =~ "InstaMapper API") {
-		return appendDataIM($self, $entries);
+		return appendDataIM($self, $entries, $file);
 	} elsif($version =~ "PhotoCatalog") {
-		return appendDataPC($self, $entries);
+		return appendDataPC($self, $entries, $file);
 	} else {
 		die "Unrecognized file for updates";
 	}
 }
 
-sub loadData {
-	my($self) = @_;
+sub readData {
+	my($self, $file) = @_;
 
-	return $self->{data} if exists($self->{data});
+	my $fd;
+	my $data;
+	if(!defined($file)) {
+		return $self->{data} if exists($self->{data});
 
-	open(my $fd, $dataFile) or die "Can't open data file";
-	my @lines = <$fd>;
-	close $fd;
+		open($fd, $dataFile) or die "Can't open data file";
+		my @lines = <$fd>;
+		close $fd;
 
-	($self->{data}, $self->{lastTimestampData}) = parseData($self, \@lines);
+		($self->{data}, $self->{lastTimestampData}) = parseData($self, \@lines, 1);
+		$data = $self->{data};
+	} else {
+		open($fd, $file) or die "Can't open data file";
+		my @lines = <$fd>;
+		close $fd;
 
-	return $self->{data};
-}
+		($data) = parseData($self, \@lines, 0);
+	}
 
-sub saveData {
-	my($self, $str) = @_;
-
-	open(my $fd, ">>$dataFile") or die "Can't write InstaMapper updates";
-	print $fd $str;
-	close $fd;
-	#print Dumper($newEntries);
-	#exit 0;
-	#unlink($dataFile);
-	#rename("$dataFile.bak", $dataFile);
+	return $data;
 }
 
 sub closestEntry {
 	my($self, $timestamp) = @_;
 
-	my $entries = loadData($self);
+	my $entries = readData($self);
 	my $matchEntry = $entries->[0];
 	my $offset = abs($matchEntry->{timestamp} - $timestamp);
 	foreach my $entry (@$entries) {
