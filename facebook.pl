@@ -39,7 +39,7 @@ use File::Basename;
 use LWP::UserAgent;
 use HTTP::Cookies;
 use HTTP::Request::Common;
-use JSON;
+use Facebook;
 use Data::Dumper;
 
 require 'common.pl';
@@ -52,8 +52,6 @@ die "Usage: $0" if !$result || @ARGV > 1;
 my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
-
-$JSON::UTF8 = 1;
 
 sub getNode {
 	my($xc, $node, $path) = @_;
@@ -73,44 +71,16 @@ sub getTextNode {
 	return;
 }
 
-sub postGraph {
-	my($ua, $token, $type, $id, $vars) = @_;
-
-	# This works around a bug where multipart/form-data becomes garbled
-	# over HTTPS when UTF-8 strings are used.
-	foreach($token, @$vars) {
-		#utf8::encode($_) if utf8::is_utf8($_);
-	}
-	my $json = new JSON;
-	my $req = POST "https://graph.facebook.com/$id/$type",
-		    Content_Type => 'form-data',
-		    Content      => [ access_token => $token,
-				      @$vars
-				    ];
-	my $resp = $ua->request($req);
-	if(!$resp->is_success) {
-		my $obj = $json->jsonToObj($resp->content);
-		die "Bad request: Failed to issue $type request: ".$obj->{error}->{type} . ".\n" . $obj->{error}->{message}
-		    if defined($obj->{error});
-		die "Bad request: $type request failed: " . $resp->status_line . ".\n" . $resp->content;
-		return;
-	}
-	my $obj = $json->jsonToObj($resp->content);
-	die "Failed to issue $type request: ".$obj->{error}->{type} . ".\n" . $obj->{error}->{message}
-	    if defined($obj->{error});
-
-	return $obj;
-}
-
 sub postPhoto {
 	my($ua, $token, $title, $descr, $file) = @_;
 
+	my $f = new Facebook token => $token, ua => $ua;
 	my $albumId = 1;
 	utf8::encode($title);
 	utf8::encode($file);
-	my $photoObj = postGraph($ua, $token, 'photos', $albumId, [ message => $title, source => [ $file ] ]);
+	my $photoObj = $f->post('photos', $albumId, [ message => $title, source => [ $file ] ]);
 	my $photoId = $photoObj->{id};
-	postGraph($ua, $token, 'comments', $photoId, [ message => $descr ])
+	$f->post('comments', $photoId, [ message => $descr ])
 	    if defined($photoId) && $descr;
 }
 
