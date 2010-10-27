@@ -28,20 +28,20 @@
 #
 
 
-use 5.008;
+use 5.008_001;
 use warnings;
 use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use FindBin;
+use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use Getopt::Long;
-use Time::Local;
-use Image::ExifTool;
 
 require 'common.pl';
 
 my $verbose = 0;
-my $result = GetOptions("Verbose" => \$verbose);
+my $result = GetOptions("verbose" => \$verbose);
 
 my $self = init();
 $self->{verbose} = $verbose;

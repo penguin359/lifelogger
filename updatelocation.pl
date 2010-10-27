@@ -28,16 +28,17 @@
 #
 
 
-use 5.008;
+use 5.008_001;
 use warnings;
 use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use FindBin;
+use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use Getopt::Long;
 use HTTP::Request;
-use LWP::UserAgent;
-use Data::Dumper;
+use LWP::UserAgent 5.810;
 
 require 'common.pl';
 
@@ -49,7 +50,7 @@ my $result = GetOptions(
 	"id=i" => \$id,
 	"slow" => \$slow,
 	"no-mark" => \$noMark,
-	"Verbose" => \$verbose);
+	"verbose" => \$verbose);
 die "Usage: $0 [-n | -s] [file.csv]" if !$result || @ARGV > 1;
 
 my $self = init();

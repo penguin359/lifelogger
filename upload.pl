@@ -28,16 +28,17 @@
 #
 
 
-use 5.008;
+use 5.008_001;
 use warnings;
 use strict;
 
 use bytes;
 #use utf8;
 #use open ':utf8', ':std';
+use FindBin;
+use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use CGI qw(:standard);
 use Getopt::Long;
-use Time::Local;
 use Image::ExifTool;
 
 binmode STDIN;

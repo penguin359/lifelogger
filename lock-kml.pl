@@ -28,12 +28,14 @@
 #
 
 
-use 5.008;
+use 5.008_001;
 use warnings;
 use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use FindBin;
+use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 
 require 'common.pl';
 

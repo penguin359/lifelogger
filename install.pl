@@ -111,6 +111,15 @@ if($@ && $?) {
 	installLib("Image::Resize");
 }
 
+eval {
+	require LWP::UserAgent;
+        $LWP::UserAgent::VERSION =~ /^(\d+)\.(\d+)$/;
+        if($1 < 5 || $1 == 5 && $2 < 810) {
+                print "LWP-UserAgent-$LWP::UserAgent::VERSION is older than 5.810.\n";
+                print "Please upgrade as older versions do not handle UTF-8 well.\n";
+        }
+};
+
 # There has got to be a better way to detect the presence of executables.
 # Unfortunately, jpegtran doesn't offer an option like -version which will
 # cause it to exit sucessfully so I need to detect the difference between

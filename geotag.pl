@@ -28,22 +28,20 @@
 #
 
 
-use 5.008;
+use 5.008_001;
 use warnings;
 use strict;
 
 use utf8;
 use open ':utf8', ':std';
+use FindBin;
+use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use Getopt::Long;
-use Time::Local;
-use Image::ExifTool;
-use File::Temp qw(tempfile);
-use Data::Dumper;
 
 require 'common.pl';
 
 my $verbose = 0;
-my $result = GetOptions("Verbose" => \$verbose);
+my $result = GetOptions("verbose" => \$verbose);
 
 if(!defined($ARGV[0])) {
 	die "Usage: $0 image.jpg";
