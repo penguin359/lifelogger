@@ -40,8 +40,12 @@ use Getopt::Long;
 
 require 'common.pl';
 
+my $id;
 my $verbose = 0;
-my $result = GetOptions("verbose" => \$verbose);
+my $result = GetOptions(
+	"id=i" => \$id,
+	"verbose" => \$verbose);
+die "Usage: $0 [-i id] [-v] [file.csv]" if !$result || @ARGV > 1;
 
 my $self = init();
 $self->{verbose} = $verbose;
@@ -50,14 +54,19 @@ lockKml($self);
 my $rssFile = $self->{settings}->{rssFeed};
 $rssFile = shift if @ARGV;
 
+my $source = findSource($self, "RSS", $id);
+
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Twitter']", $doc);
+my $locationPath = "/kml:kml/kml:Document/kml:Folder[kml:name='Twitter']";
+my $locationId = $source->{kml}->{location};
+$locationPath = "//kml:Folder[\@id='$locationId']" if defined($locationId);
+my @base = $xc->findnodes($locationPath, $doc);
 my $parser = new XML::LibXML;
 my $rssDoc = $parser->parse_file($rssFile);
 my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 
-die "Can't find base for twitter" if @base != 1;
+die "Can't find base for RSS" if @base != 1;
 
 my $newEntries = [];
 #print "List:\n";
@@ -71,7 +80,7 @@ foreach my $item (reverse @items) {
 	$point        = $point->nodeValue if defined($point);
 	my $timestamp = parseDate($pubDate);
 
-	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $doc);
+	my @guidMatches = $xc->findnodes("kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $base[0]);
 	if(@guidMatches) {
 		die "Duplicate GUIDs" if @guidMatches > 1;
 		#my $kmlGuid = $guidMatches[0]->getNodeValue;

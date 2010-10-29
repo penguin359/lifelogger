@@ -51,7 +51,7 @@ my $result = GetOptions(
 	"slow" => \$slow,
 	"no-mark" => \$noMark,
 	"verbose" => \$verbose);
-die "Usage: $0 [-n | -s] [file.csv]" if !$result || @ARGV > 1;
+die "Usage: $0 [-i id] [-n | -s] [-v] [file.csv]" if !$result || @ARGV > 1;
 
 my $self = init();
 $self->{verbose} = $verbose;
@@ -60,32 +60,13 @@ lockKml($self);
 my $source;
 my $newEntries = [];
 if(defined($ARGV[0])) {
-	die "Must specify source id with -i.\n"
-	    if !defined($id);
-	$source = $self->{sourcesId}->{$id};
-	die "Source $id is not configured.\n"
-	    if !defined($source);
+	$source = findSource($self, "GPX", $id);
 	print "Loading CSV file.\n" if $self->{verbose};
 	open(my $fd, $ARGV[0]) or die "Can't load file '$ARGV[0]'";
 	my @lines = <$fd>;
 	($newEntries) = parseData($self, \@lines);
 } else {
-	if(defined($id)) {
-		$source = $self->{sourcesId}->{$id};
-		die "Source $id is not configured.\n"
-		    if !defined($source);
-		die "Source $id is not InstaMapper.\n"
-		    if lc $source->{type} ne "instamapper";
-	} else {
-		foreach(@{$self->{sources}}) {
-			if(lc $_->{type} eq "instamapper") {
-				$source = $_;
-				last;
-			}
-		}
-		die "No InstaMapper source has been configured.\n"
-		    if !defined($source);
-	}
+	$source = findSource($self, "InstaMapper", $id);
 	my $apiKey = $source->{apiKey};
 	my $last = lastTimestamp($self, $source->{id});
 	my $lastTimestamp = $last->{timestamp};
@@ -121,9 +102,6 @@ $locationPath = "//kml:Folder[\@id='$locationId']" if defined($locationId);
 my @locationBase = $xc->findnodes($locationPath, $doc);
 
 die "Can't find base for location" if @locationBase != 1;
-
-print "Saving location data.\n" if $self->{verbose};
-appendData($self, $newEntries);
 
 print "Adding placemarks.\n" if $self->{verbose} && @$newEntries && !$noMark;
 my $kmlEntries = [];
@@ -163,5 +141,8 @@ if(defined($currentPosition)) {
 	warn "No position node found.\n" if @positionNode < 1;
 	$positionNode[0]->setData("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
 }
+
+print "Saving location data.\n" if $self->{verbose};
+appendData($self, $newEntries);
 
 saveKml($self, $doc);

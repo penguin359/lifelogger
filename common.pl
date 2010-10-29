@@ -702,4 +702,43 @@ sub addImage {
 	addPlacemark($doc, $base, $mark);
 }
 
+sub findSource {
+	my($self, $type, $id) = @_;
+
+	my $source;
+	if(defined($id)) {
+		$source = $self->{sourcesId}->{$id};
+		die "Source $id is not configured.\n"
+		    if !defined($source);
+		die "Source $id is not $type.\n"
+		    if lc $source->{type} ne lc $type;
+	} else {
+		foreach(@{$self->{sources}}) {
+			if(lc $_->{type} eq lc $type) {
+				$source = $_;
+				last;
+			}
+		}
+		die "No $type source has been configured.\n"
+		    if !defined($source);
+	}
+
+	return $source;
+}
+
+#sub findKmlNode {
+#	my($self, $source, $doc, $id, $legacyPath) = @_;
+#
+#	my $xc = loadXPath($self);
+#	my $locationPath = $legacyPath;
+#	my $locationId = $source->{kml}->{location};
+#	$locationPath = "//kml:Folder[\@id='$locationId']" if defined($locationId);
+#	my @base = $xc->findnodes($locationPath, $doc);
+#	my $parser = new XML::LibXML;
+#	my $rssDoc = $parser->parse_file($rssFile);
+#	my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
+#
+#	die "Can't find base for RSS" if @base != 1;
+#}
+
 1;
