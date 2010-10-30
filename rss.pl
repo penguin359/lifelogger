@@ -51,22 +51,33 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
+my $source;
 my $rssFile = $self->{settings}->{rssFeed};
 $rssFile = shift if @ARGV;
 
-my $source = findSource($self, "RSS", $id);
+if(defined($rssFile)) {
+	$source = {
+		id => 10,
+		name => "Twitter",
+		deviceKey => 10,
+		file => $rssFile
+	};
+} else {
+	$source = findSource($self, "RSS", $id);
+	$rssFile = $source->{file};
+}
 
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my $locationPath = "/kml:kml/kml:Document/kml:Folder[kml:name='Twitter']";
-my $locationId = $source->{kml}->{location};
-$locationPath = "//kml:Folder[\@id='$locationId']" if defined($locationId);
-my @base = $xc->findnodes($locationPath, $doc);
+my $containerPath = "/kml:kml/kml:Document/kml:Folder[kml:name='Twitter']";
+my $containerId = $source->{kml}->{container};
+$containerPath = "//kml:Folder[\@id='$containerId']" if defined($containerId);
+my @base = $xc->findnodes($containerPath, $doc);
 my $parser = new XML::LibXML;
 my $rssDoc = $parser->parse_file($rssFile);
 my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 
-die "Can't find base for RSS" if @base != 1;
+die "Can't find container for RSS" if @base != 1;
 
 my $newEntries = [];
 #print "List:\n";
@@ -100,12 +111,12 @@ foreach my $item (reverse @items) {
 	my $entry = {};
 	if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
 		($entry->{latitude}, $entry->{longitude}) = ($1, $2);
-		$entry->{key} = 0;
-		$entry->{label} = 'Twitter';
+		$entry->{key} = $source->{deviceKey};
+		$entry->{label} = $source->{name};
 		$entry->{timestamp} = $timestamp;
-		$entry->{altitude} = '';
-		$entry->{speed} = '';
-		$entry->{heading} = '';
+		#$entry->{altitude} = '';
+		#$entry->{speed} = '';
+		#$entry->{heading} = '';
 		push @$newEntries, $entry;
 	} else {
 		$entry = closestEntry($self, $timestamp);
