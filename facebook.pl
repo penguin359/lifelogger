@@ -77,8 +77,6 @@ sub postPhoto {
 
 	my $f = new Facebook token => $token, ua => $ua;
 	my $albumId = 1;
-	utf8::encode($title);
-	utf8::encode($file);
 	my $photoObj = $f->post('photos', $albumId, [ message => $title, source => [ $file ] ]);
 	my $photoId = $photoObj->{id};
 	$f->post('comments', $photoId, [ message => $descr ])
@@ -91,7 +89,6 @@ my $settingsDoc = $parser->parse_file("facebook.xml");
 
 my $token = getTextNode($xc, $settingsDoc, '/settings/sources/source/accessToken');
 print "Token: '", $token, "'\n";
-utf8::encode($token);
 
 my $doc = loadKml($self);
 my @placemarks = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Photos']/kml:Placemark", $doc);

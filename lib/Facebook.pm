@@ -32,7 +32,7 @@ use 5.008;
 use warnings;
 use strict;
 
-#use utf8;
+use utf8;
 use open ':utf8', ':std';
 use Getopt::Long;
 use File::Basename;
@@ -55,11 +55,6 @@ sub post {
 	my $ua = $self->{ua};
 	my $token = $self->{token};
 
-	# This works around a bug where multipart/form-data becomes garbled
-	# over HTTPS when UTF-8 strings are used.
-	foreach($token, @$vars) {
-		#utf8::encode($_) if utf8::is_utf8($_);
-	}
 	my $json = new JSON;
 	my $req = POST "https://graph.facebook.com/$id/$type",
 		    Content_Type => 'form-data',
