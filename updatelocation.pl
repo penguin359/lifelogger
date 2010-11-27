@@ -101,22 +101,26 @@ my $locationId = $source->{kml}->{location};
 $locationPath = "//kml:Folder[\@id='$locationId']" if defined($locationId);
 my @locationBase = $xc->findnodes($locationPath, $doc);
 
-die "Can't find base for location" if @locationBase != 1;
+#die "Can't find base for location" if @locationBase != 1;
 
-print "Adding placemarks.\n" if $self->{verbose} && @$newEntries && !$noMark;
-my $kmlEntries = [];
-push @$kmlEntries, pop @$newEntries if @$newEntries && !$noMark;
-push @$newEntries, @$kmlEntries;
-foreach my $entry (@$kmlEntries) {
-	next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
-	my $mark = createPlacemark($doc);
-	addTimestamp($doc, $mark, $entry->{timestamp});
-	addStyle($doc, $mark, 'icon');
-	addExtendedData($doc, $mark, {
-	    speed => $entry->{speed} . " m/s",
-	    heading => $entry->{heading}});
-	addPoint($doc, $mark, $entry->{longitude}, $entry->{latitude}, $entry->{altitude});
-	addPlacemark($doc, $locationBase[0], $mark);
+if(@locationBase > 1) {
+	die "Duplicate base for location";
+} elsif(@locationBase == 1) {
+	print "Adding placemarks.\n" if $self->{verbose} && @$newEntries && !$noMark;
+	my $kmlEntries = [];
+	push @$kmlEntries, pop @$newEntries if @$newEntries && !$noMark;
+	push @$newEntries, @$kmlEntries;
+	foreach my $entry (@$kmlEntries) {
+		next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
+		my $mark = createPlacemark($doc);
+		addTimestamp($doc, $mark, $entry->{timestamp});
+		addStyle($doc, $mark, 'icon');
+		addExtendedData($doc, $mark, {
+		    speed => $entry->{speed} . " m/s",
+		    heading => $entry->{heading}});
+		addPoint($doc, $mark, $entry->{longitude}, $entry->{latitude}, $entry->{altitude});
+		addPlacemark($doc, $locationBase[0], $mark);
+	}
 }
 
 print "Updating path.\n" if $self->{verbose};

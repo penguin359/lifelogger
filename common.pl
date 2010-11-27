@@ -37,6 +37,7 @@ use Fcntl ':flock';
 use POSIX qw(strftime);
 use Time::Local;
 use XML::LibXML;
+use Image::ExifTool;
 #use DBI;
 use Data::Dumper;
 

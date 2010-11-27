@@ -33,6 +33,7 @@ use strict;
 use utf8;
 use open ':utf8', ':std';
 use Fcntl qw(:seek);
+use POSIX qw(strftime);
 
 
 my $dataFile = "$settings->{cwd}/location.csv";
@@ -336,6 +337,8 @@ sub writeEntries {
 		my $first = 1;
 		foreach(@$fields) {
 			$line .= "," if !$first;
+			$entry->{$_} = strftime("%FT%TZ", gmtime($entry->{timestamp}))
+			    if $_ eq "isotime" && defined($entry->{timestamp});
 			$line .= $entry->{$_} if defined($entry->{$_});
 			$first = 0;
 		}
