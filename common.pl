@@ -701,6 +701,13 @@ sub addImage {
 	addStyle($doc, $mark, 'photo');
 	addPoint($doc, $mark, $latitude, $longitude, $altitude);
 	addPlacemark($doc, $base, $mark);
+	my $fieldsImage = [
+		"filename",
+		"title",
+		"description",
+	];
+	writeDataPC($self, [], 'images.csv', $fieldsImage, 1) if ! -f 'images.csv';
+	appendDataPC($self, [{ filename => $filename, title => $title, description => $description }], 'images.csv', 1, $fieldsImage);
 }
 
 sub findSource {

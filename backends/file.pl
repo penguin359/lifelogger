@@ -329,7 +329,9 @@ my $fieldsPC = [
     "heading"];
 
 sub writeEntries {
-	my($self, $fd, $entries, $fields, $update) = @_;
+	my($self, $fd, $entries, $fields, $update, $quote) = @_;
+
+	lastTimestamp($self) if $update;
 
 	my $sourcesId = $self->{sourcesId};
 	foreach my $entry (@$entries) {
@@ -339,7 +341,14 @@ sub writeEntries {
 			$line .= "," if !$first;
 			$entry->{$_} = strftime("%FT%TZ", gmtime($entry->{timestamp}))
 			    if $_ eq "isotime" && defined($entry->{timestamp});
-			$line .= $entry->{$_} if defined($entry->{$_});
+			if(defined($entry->{$_})) {
+				my $col = $entry->{$_};
+				if($quote) {
+					$col =~ s/"/""/g;
+					$col = "\"$col\"";
+				}
+				$line .= $col;
+			}
 			$first = 0;
 		}
 		$line .= "\n";
@@ -377,13 +386,12 @@ sub writeDataIM {
 	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
 
 	print $fd "InstaMapper API v1.00\n";
-	lastTimestamp($self);
 	writeEntries($self, $fd, $entries, $fieldsIM, $update);
 	close $fd;
 }
 
 sub writeDataPC {
-	my($self, $entries, $file, $fields) = @_;
+	my($self, $entries, $file, $fields, $quote) = @_;
 
 	my $update = 0;
 	if(!defined($file)) {
@@ -403,8 +411,7 @@ sub writeDataPC {
 	$header .= "\n";
 	print $fd "PhotoCatalog v1.0\n";
 	print $fd $header;
-	lastTimestamp($self);
-	writeEntries($self, $fd, $entries, $fields, $update);
+	writeEntries($self, $fd, $entries, $fields, $update, $quote);
 	close $fd;
 }
 
@@ -418,13 +425,12 @@ sub appendDataIM {
 	}
 	open(my $fd, ">>", $file) or die "Can't append InstaMapper updates";
 
-	lastTimestamp($self);
 	writeEntries($self, $fd, $entries, $fieldsIM, $update);
 	close $fd;
 }
 
 sub appendDataPC {
-	my($self, $entries, $file) = @_;
+	my($self, $entries, $file, $quote, $required) = @_;
 
 	my $update = 0;
 	if(!defined($file)) {
@@ -437,16 +443,16 @@ sub appendDataPC {
 	my @lines = ();
 	push @lines, $_ if defined($_ = <$fd>);
 	push @lines, $_ if defined($_ = <$fd>);
-	my($fields, undef, $required) = parseDataHeaderPC($self, \@lines);
+	my $fields;
+	($fields, undef, $required) = parseDataHeaderPC($self, \@lines, $required);
 	seek $fd, 0, SEEK_END;
 
-	lastTimestamp($self);
-	writeEntries($self, $fd, $entries, $fields, $update);
+	writeEntries($self, $fd, $entries, $fields, $update, $quote);
 	close $fd;
 }
 
 sub appendData {
-	my($self, $entries, $file) = @_;
+	my($self, $entries, $file, $quote) = @_;
 
 	my $appendFile = $file;
 	$appendFile = $dataFile if !defined($appendFile);
@@ -459,7 +465,7 @@ sub appendData {
 	if($version =~ "InstaMapper API") {
 		return appendDataIM($self, $entries, $file);
 	} elsif($version =~ "PhotoCatalog") {
-		return appendDataPC($self, $entries, $file);
+		return appendDataPC($self, $entries, $file, $quote);
 	} else {
 		die "Unrecognized file for updates";
 	}
