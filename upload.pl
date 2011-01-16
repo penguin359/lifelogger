@@ -32,16 +32,6 @@ use 5.008_001;
 use warnings;
 use strict;
 
-use lib qw(
-	/home/sttng359/local-i386/lib/perl/5.8.8
-	/home/sttng359/local-i386/lib/perl/5.8.8/auto
-	/home/sttng359/local-i386/lib/perl/5.8
-	/home/sttng359/local-i386/lib/perl/5.8/auto
-	/home/sttng359/local-i386/share/perl/5.8
-	/home/sttng359/local-i386/share/perl/5.8.8
-	/home/sttng359/public_html/XML-DOM-1.44/blib/lib
-	/home/sttng359/public_html/libwww-perl-5.837/blib/lib
-);
 use bytes;
 #use utf8;
 use open ':utf8', ':std';
@@ -103,8 +93,7 @@ if(defined(param('type')) && param('type') eq "gps") {
 		close $outFd;
 		close $readFd;
 	}
-	$ENV{PERL5LIB} = "/home/sttng359/local-i386/lib/perl/5.8.8:/home/sttng359/local-i386/lib/perl/5.8.8/auto:/home/sttng359/local-i386/lib/perl/5.8:/home/sttng359/local-i386/lib/perl/5.8/auto:/home/sttng359/local-i386/share/perl/5.8:/home/sttng359/local-i386/share/perl/5.8.8:/home/sttng359/public_html/XML-DOM-1.44/blib/lib:/home/sttng359/public_html/libwww-perl-5.837/blib/lib";
-	system("./updatelocation.pl", "-i", $source, "tmp/gps.csv");
+	system("./updatelocation.pl", "-id", $source, "-www", "tmp/gps.csv");
 	if($?) {
 		print "ERROR\n";
 		print "Failed to exec updatelocation.pl\n";

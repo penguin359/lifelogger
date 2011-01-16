@@ -45,13 +45,15 @@ require 'common.pl';
 my $id;
 my $slow = 0;
 my $noMark = 0;
+my $www = 0;
 my $verbose = 0;
 my $result = GetOptions(
 	"id=i" => \$id,
 	"slow" => \$slow,
 	"no-mark" => \$noMark,
+	"www" => \$www,
 	"verbose" => \$verbose);
-die "Usage: $0 [-i id] [-n | -s] [-v] [file.csv]" if !$result || @ARGV > 1;
+die "Usage: $0 [-id id] [-no-mark | -slow] [-verbose] [file.csv]" if !$result || @ARGV > 1;
 
 my $self = init();
 $self->{verbose} = $verbose;
@@ -60,7 +62,9 @@ lockKml($self);
 my $source;
 my $newEntries = [];
 if(defined($ARGV[0])) {
-	$source = findSource($self, "GPX", $id);
+	my $type = "GPX";
+	$type = "WWW" if $www;
+	$source = findSource($self, $type, $id);
 	print "Loading CSV file.\n" if $self->{verbose};
 	open(my $fd, $ARGV[0]) or die "Can't load file '$ARGV[0]'";
 	my @lines = <$fd>;

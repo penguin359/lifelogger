@@ -133,11 +133,17 @@ if(($^O eq "MSWin32" &&
 
 print "\n";
 print <<EOF;
+
+              **********  PLEASE READ!!!  **********
+
 Most of the functionality of these scripts currently requires an
-InstaMapper account.  The main exception are photos that have already
-been Geotagged, and soon will be Geotagged Tweets.  We plan to support
-other sources as well, but for now, you can get an InstaMapper account
-at http://www.instamapper.com/.
+InstaMapper account or the PhotoCatalog for Android app.  The main
+exceptions are photos that have already been Geotagged, and Geotagged
+Tweets or FourSquare check-ins.  We plan to support other sources as
+well, but for now, you can get an InstaMapper account at
+http://www.instamapper.com/ or install the PhotoCatalog for Android app
+from the PhotoCatalog website.  If you don't plan to use InstaMapper,
+you can just leave it as the default.
 
 The default API Key is a demo car that can be used for testing.  Only
 one device is supported at this time so don't use a Master API Key.
