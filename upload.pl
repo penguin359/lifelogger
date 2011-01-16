@@ -32,132 +32,182 @@ use 5.008_001;
 use warnings;
 use strict;
 
+use lib qw(
+	/home/sttng359/local-i386/lib/perl/5.8.8
+	/home/sttng359/local-i386/lib/perl/5.8.8/auto
+	/home/sttng359/local-i386/lib/perl/5.8
+	/home/sttng359/local-i386/lib/perl/5.8/auto
+	/home/sttng359/local-i386/share/perl/5.8
+	/home/sttng359/local-i386/share/perl/5.8.8
+	/home/sttng359/public_html/XML-DOM-1.44/blib/lib
+	/home/sttng359/public_html/libwww-perl-5.837/blib/lib
+);
 use bytes;
 #use utf8;
-#use open ':utf8', ':std';
+use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use CGI qw(:standard);
 use Getopt::Long;
-use Image::ExifTool;
+use Data::Dumper;
 
-binmode STDIN;
-print "Content-type: text/plain\r\n\r\n";
+#binmode STDIN;
+binmode \*STDIN;
+binmode \*STDIN, ":bytes";
+print "Content-type: text/plain; charset=utf-8\r\n\r\n";
 #system('env');
 
 
 require 'common.pl';
 
+my $verbose = 0;
+#my $result = GetOptions("verbose" => \$verbose);
+
+#print "Hi!\n";
+
+binmode \*STDIN;
+binmode \*STDIN, ":bytes";
+#eval { param('response') };
+#print "Eval: $@\n";
+my $response = param('response');
+my $finish = param('finish');
+
+my $text = 0;
+$text = 1 if defined($response) && $response eq "text";
+
+if(!$finish) {
+	print "ERROR\n" if $text;
+	print "Upload incomplete.\n";
+	exit 0;
+}
+
+if(defined(param('type')) && param('type') eq "gps") {
+	my $source = param('source');
+	if(!defined($source)) {
+		print "ERROR\n" if $text;
+		print "No source defined.\n";
+		exit 0;
+	}
+	my $readFd = upload('file');
+	if(!defined($readFd)) {
+		open(my $outFd, '>:bytes', "tmp/gps.csv");
+		binmode $outFd;
+		print $outFd param('file');
+		close $outFd;
+	} else {
+		open(my $outFd, '>:bytes', "tmp/gps.csv");
+		binmode $outFd;
+		while(<$readFd>) {
+			print $outFd $_;
+		}
+		close $outFd;
+		close $readFd;
+	}
+	$ENV{PERL5LIB} = "/home/sttng359/local-i386/lib/perl/5.8.8:/home/sttng359/local-i386/lib/perl/5.8.8/auto:/home/sttng359/local-i386/lib/perl/5.8:/home/sttng359/local-i386/lib/perl/5.8/auto:/home/sttng359/local-i386/share/perl/5.8:/home/sttng359/local-i386/share/perl/5.8.8:/home/sttng359/public_html/XML-DOM-1.44/blib/lib:/home/sttng359/public_html/libwww-perl-5.837/blib/lib";
+	system("./updatelocation.pl", "-i", $source, "tmp/gps.csv");
+	if($?) {
+		print "ERROR\n";
+		print "Failed to exec updatelocation.pl\n";
+		exit 0;
+	}
+	print "OK\n";
+	exit 0;
+}
+
+$verbose = 1 if !$text;
+
 my $self = init();
-$self->{verbose} = 1;
+$self->{verbose} = $verbose;
 lockKml($self);
 
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Unsorted Photos']", $doc);
+my @messageBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Messages']", $doc);
+my @photoBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Photos']", $doc);
 
-print "Checking for base...\n";
-die "Can't find base for unsorted photos" if @base != 1;
-print "Found.\n";
+print "Checking for base...\n" if !$text;
+die "Can't find base for photos" if @photoBase != 1;
+die "Can't find base for messages" if @messageBase != 1;
+print "Found.\n" if !$text;
 
 $self->{rssFeed} = loadRssFeed($self);
 $self->{atomFeed} = loadAtomFeed($self);
 
-print "Feeds loaded.\n";
+print "Feeds loaded.\n" if !$text;
 
-sub addImage {
-	my($path, $self, $doc, $base) = @_;
-
-	my $website = $self->{settings}->{website};
-
-	return if ! -f $path || ! -s $path;
-	print "Processing $path\n" if $self->{verbose};
-	my $exif = new Image::ExifTool;
-	open(my $fd, '<:bytes', $path) or die "Can't open file $path";
-	binmode($fd);
-	my $info = $exif->ImageInfo($fd);
-	close $fd;
-	my $filename = $path;
-	$filename =~ s:.*/::;
-	$filename =~ s:\.[jJ][pP][eE]?[gG]$:.jpg:;
-	print "Renaming '$path' to 'images/$filename'\n" if $self->{verbose};
-	rename($path, "images/$filename") or die "Failed rename(): $!";
-	createThumbnails($self, $filename);
-
-	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
-	    $atime,$mtime,$ctime,$blksize,$blocks) = stat("images/$filename");
-
-	my $timestamp = $mtime;
-	die "Failed to stat $path: $!" if(!defined($timestamp) || $timestamp == 0);
-	if(exists $info->{DateTimeOriginal}) {
-		$timestamp = parseExifDate($info->{DateTimeOriginal});
-	}
-	my $latitude;
-	my $longitude;
-	my $altitude;
-	if(exists $info->{GPSPosition}) {
-		$info->{GPSPosition} =~ /(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([NS]),\s*(\d+)\s*deg\s*(?:(\d+)'\s*(?:(\d+(?:\.\d*)?)")?)?\s*([EW])/;
-		#print "Loc: $1° $2' $3\" $4, $5° $6' $7\" $8\n";
-		$latitude = $1 + ($2 + $3/60)/60;
-		$latitude *= -1 if $4 eq "S";
-		$longitude = $5 + ($6 + $7/60)/60;
-		$longitude *= -1 if $8 eq "W";
-	} else {
-		my $entry = closestEntry($self, $timestamp);
-		$latitude = $entry->{latitude};
-		$longitude = $entry->{longitude};
-		$altitude = $entry->{altitude};
-	}
-	#print "$longitude,$latitude\n";
-
-	my $title = param('title');
-	my $descr = param('description');
-	my $mark = createPlacemark($doc);
-	addName($doc, $mark, $title);
-	addDescription($doc, $mark, "<p><b>$title</b></p><p>$descr</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addRssEntry($self, $self->{rssFeed}, $title, "$website/images/$filename", "<p><b>$title</b></p><p>$descr</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addAtomEntry($self, $self->{atomFeed}, $title, "$website/images/$filename", "<p><b>$title</b></p><p>$descr</p><a href=\"$website/images/$filename\"><img src=\"$website/images/160/$filename\"></a>");
-	addTimestamp($doc, $mark, $timestamp);
-	addStyle($doc, $mark, 'photo');
-	addPoint($doc, $mark, $latitude, $longitude);
-	addPlacemark($doc, $base, $mark);
-}
+my $messageBase = $messageBase[0];
+my $photoBase = $photoBase[0];
 
 
-print "Checking form.\n";
+print "Checking form.\n" if !$text;
 binmode \*STDIN;
 binmode \*STDIN, ":bytes";
-#die "Aaaaaaaaaaaaaaaaaaaaaaaah!!!";
 foreach('file', 'description', 'title') {
-	print "$_: '" . param($_) . "'\n";
+	print "$_: '" . param($_) . "'\n" if defined(param($_)) && !$text;
 }
-if(param()) {
-	print "Form\n";
-}
+
+my $title = param('title');
+my $descr = param('description');
+
+$title = "" if !defined($title);
+$descr = "" if !defined($descr);
+
 if(defined(upload('file'))) {
-	my $readFd = upload('file');
-	my $imageFile = "$self->{settings}->{cwd}/tmp/" . param('file');
-	my $imageFile2 = "$self->{settings}->{cwd}/images/" . param('file');
-	if(-e $imageFile2) {
-		print "Duplicate file exists";
-		exit 0;
+	print "Found an image\n" if $self->{verbose};
+	foreach my $readFd (upload('file')) {
+		print Dumper uploadInfo($readFd) if !$text;
+		my $filename;
+		if(defined(uploadInfo($readFd)) && defined(uploadInfo($readFd)->{'Content-Disposition'})) {
+			if(uploadInfo($readFd)->{'Content-Disposition'} =~ /filename="([^;]*)"/) {
+				$filename = $1;
+			}
+		}
+		if(!defined($filename)) {
+			print "ERROR\n" if $text;
+			print "No filename to use.\n";
+			exit 0;
+		}
+		$filename =~ s:[/\\]:_:g;
+		open(my $outFd, '>:bytes', "tmp/$filename");
+		binmode $outFd;
+		while(<$readFd>) {
+			print $outFd $_;
+		}
+		close $outFd;
+		close $readFd;
+		print "File: '" . $filename . "'\n" if !$text;
+		eval {
+			my $oldFilename = $filename;
+			$filename = processImage($self, "tmp/$filename", $title);
+			die "Could not process image 'tmp/$oldFilename'" if !defined($filename);
+			addImage($filename, $self, $doc, $photoBase, $title, $descr);
+			createThumbnails($self, $filename);
+		};
+		if($@) {
+			print "ERROR\n" if $text;
+			print "Error: $@\n";
+			exit 0;
+		}
+		print "File: '" . $filename . "'\n" if !$text;
 	}
-	open my $writeFd, ">:bytes", $imageFile or die "Can't write";
-	binmode $writeFd;
-	while(<$readFd>) {
-		print $writeFd $_;
-	}
-	close $writeFd;
-	print "File: '" . $imageFile . "'\n";
-	addImage($imageFile, $self, $doc, $base[0]);
-	my $fd = upload('file');
-	#while(<$fd>) {
-	#	print "$_";
-	#}
+} else {
+	my $html = "<p><b>$title</b></p><p>$descr</p>";
+	my $mark = createPlacemark($doc);
+	#my $entry = closestEntry($self, $self->{date});
+	my $entry = {};
+	addName($doc, $mark, $title);
+	addDescription($doc, $mark, $html);
+	addStyle($doc, $mark, 'text');
+	#addTimestamp($doc, $mark, $self->{date});
+	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
+	addPlacemark($doc, $messageBase, $mark);
+	my $uuid = `uuidgen`;
+	chomp($uuid);
+	addRssEntry($self, $self->{rssFeed}, $title, "urn:uuid:$uuid", $html);
+	addAtomEntry($self, $self->{atomFeed}, $title, "urn:uuid:$uuid", $html);
 }
 
-#exit 0;
-
+print "OK\n" if $text;
 
 saveKml($self, $doc);
 saveRssFeed($self, $self->{rssFeed});

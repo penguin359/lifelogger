@@ -7,7 +7,8 @@
     <form method="POST" action="upload.pl" enctype="multipart/form-data">
       Title: <input type="text" name="title" /><br />
       Description: <input type="text" name="description" /><br />
-      File: <input type="file" name="file" /><br />
+      File: <input type="file" name="file" multiple="" /><br />
+      <input type="hidden" name="finish" value="1" />
       <input type="submit" />
     </form>
   </body>
