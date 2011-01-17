@@ -37,19 +37,24 @@ use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use Getopt::Long;
+use Net::OAuth::Local;
 use HTTP::Request;
 use LWP::UserAgent 5.810;
+use HTTP::Request::Common;
+use JSON;
 
 require 'common.pl';
 
 my $id;
 my $slow = 0;
 my $noMark = 0;
+my $latitude = 0;
 my $verbose = 0;
 my $result = GetOptions(
 	"id=i" => \$id,
 	"slow" => \$slow,
 	"no-mark" => \$noMark,
+	"latitude" => \$latitude,
 	"verbose" => \$verbose);
 die "Usage: $0 [-i id] [-n | -s] [-v] [file.csv]" if !$result || @ARGV > 1;
 
@@ -57,9 +62,105 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
+sub updateLatitudeLocation {
+	my($source, $entry) = @_;
+
+	print "Updating Google Latitude.\n" if $self->{verbose};
+
+	my $url = 'https://www.googleapis.com/latitude/v1/currentLocation';
+
+	my $ua = LWP::UserAgent->new;
+
+	my $oauthData = {
+		protocol => "oauth 1.0a",
+		app => 'Google',
+		type => "Access",
+		params => {
+			token => $source->{token},
+			token_secret => $source->{tokenSecret},
+			request_url => $url,
+			request_method => 'POST',
+		},
+	};
+
+	my $oauth = requestSign($oauthData);
+
+	my $location = {
+		data => {
+			kind => 'latitude#location',
+			timestampMs => $entry->{timestamp}*1000,
+			latitude => $entry->{latitude},
+			longitude => $entry->{longitude},
+		}
+	};
+	$location->{data}->{altitude} = $entry->{altitude} if defined($entry->{altitude}) && $entry->{altitude} ne "";
+
+	my $json = new JSON;
+	$json->utf8(1);
+
+	my $req = POST $url, Authorization => $oauth->{authorization}, Content_Type => 'application/json', Content => $json->encode($location);
+	#print Dumper($req);
+	my $response = $ua->request($req);
+	die "Bad request ".$response->status_line if !$response->is_success;
+
+	# Parse the result of the HTTP request
+	#print Dumper($json->decode($response->content));
+	print "Successfully updated Google Latitude.\n" if $self->{verbose};
+}
+
 my $source;
 my $newEntries = [];
-if(defined($ARGV[0])) {
+if($latitude) {
+	$source = findSource($self, "Latitude", $id);
+	print "Loading Google Latitude.\n" if $self->{verbose};
+
+	my $url = 'https://www.googleapis.com/latitude/v1/location';
+
+	my $ua = LWP::UserAgent->new;
+
+	my $oauthData = {
+		protocol => "oauth 1.0a",
+		app => 'Google',
+		type => "Access",
+		params => {
+			token => $source->{token},
+			token_secret => $source->{tokenSecret},
+			request_url => $url,
+			request_method => 'GET',
+		},
+	};
+
+	my $oauth = requestSign($oauthData);
+
+	my $req = GET $url, Authorization => $oauth->{authorization};
+	#print Dumper($req);
+	my $response = $ua->request($req);
+	die "Bad request ".$response->status_line if !$response->is_success;
+
+	my $last = lastTimestamp($self, $source->{id});
+	# Parse the result of the HTTP request
+	#print $response->content, "\n";
+	my $json = new JSON;
+	$json->utf8(1);
+	my $obj = $json->decode($response->content);
+	#print Dumper($obj);
+	die "Not a location feed" if $obj->{data}->{kind} ne 'latitude#locationFeed';
+	foreach(reverse @{$obj->{data}->{items}}) {
+		next if $_->{kind} ne 'latitude#location';
+		$_->{timestamp} = int($_->{timestampMs} / 1000);
+		#print Dumper([$_, $last]);
+		next if $_->{timestamp} <= $last->{timestamp};
+		#next if $_->{latitude} > 60 || $_->{latitude} < 10;
+		#next if $_->{longitude} > -30 || $_->{longitude} < -150;
+		next if $_->{latitude} > 70 || $_->{latitude} < 10;
+		next if $_->{longitude} > 30 || $_->{longitude} < -150;
+		$_->{source} = $source->{id};
+		$_->{label} = $source->{name};
+		$_->{altitude} = 0;
+		push @$newEntries, $_;
+	}
+	print Dumper($newEntries);
+} elsif(defined($ARGV[0])) {
 	$source = findSource($self, "GPX", $id);
 	print "Loading CSV file.\n" if $self->{verbose};
 	open(my $fd, $ARGV[0]) or die "Can't load file '$ARGV[0]'";
@@ -144,6 +245,17 @@ if(defined($currentPosition)) {
 	my @positionNode = $xc->findnodes($positionPath, $doc);
 	warn "No position node found.\n" if @positionNode < 1;
 	$positionNode[0]->setData("$currentPosition->{longitude},$currentPosition->{latitude},$currentPosition->{altitude}");
+
+	if(defined($source->{updateLatitudeSource}) &&
+	   $source->{updateLatitudeSource} ne "") {
+		eval {
+			my $latitudeSource =
+			    findSource($self, "Latitude",
+				       $source->{updateLatitudeSource});
+			updateLatitudeLocation($latitudeSource, $currentPosition);
+		};
+		warn $@ if $@;
+	}
 }
 
 print "Saving location data.\n" if $self->{verbose};

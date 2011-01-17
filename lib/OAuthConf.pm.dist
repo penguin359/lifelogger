@@ -1,0 +1,52 @@
+use 5.008_001;
+use warnings;
+use strict;
+
+use utf8;
+
+
+$oauthApps = {
+	twitter => {
+		oauth => {
+			consumer_key => '',
+			consumer_secret => '',
+			signature_method => 'HMAC-SHA1',
+		},
+		realm => "Twitter",
+		request => 'https://api.twitter.com/oauth/request_token',
+		access => 'https://api.twitter.com/oauth/access_token',
+		authorize => 'https://api.twitter.com/oauth/authorize',
+	},
+	statusnet => {
+		oauth => {
+			consumer_key => '',
+			consumer_secret => '',
+			signature_method => 'HMAC-SHA1',
+		},
+		realm => "StatusNet",
+		request => 'http://identi.ca/api/oauth/request_token',
+		access => 'http://identi.ca/api/oauth/access_token',
+		authorize => 'http://identi.ca/api/oauth/authorize',
+	},
+	google => {
+		oauth => {
+			consumer_key => '',
+			consumer_secret => '',
+			signature_method => 'HMAC-SHA1',
+		},
+		realm => "Google",
+	},
+	foursquare => {
+		oauth => {
+			consumer_key => '',
+			consumer_secret => '',
+			signature_method => 'HMAC-SHA1',
+		},
+		realm => "FourSquare",
+		request => 'http://foursquare.com/oauth/request_token',
+		access => 'http://foursquare.com/oauth/access_token',
+		authorize => 'http://foursquare.com/oauth/authorize',
+	},
+};
+
+1;

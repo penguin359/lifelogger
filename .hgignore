@@ -2,6 +2,7 @@
 ^examples/crontab$
 ^examples/procmailrc$
 ^images/
+^lib/OAuthConf.pm$
 ^live.atom$
 ^live.kml$
 ^live.rss$
