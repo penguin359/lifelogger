@@ -5,13 +5,10 @@ use strict;
 use utf8;
 
 
-# InstaMapper Device API Key
-$settings->{apiKey} = "@@APIKEY@@";
-
 # Directory where photocatalog is installed.
 $settings->{cwd} = "@@CWD@@";
 
-# Backend for data storeage.  Only working type is 'file'.
+# Backend for data storage.  Only working type is 'file'.
 $settings->{backend} = "file";
 
 # Settings for database backend.
@@ -22,7 +19,39 @@ $settings->{dbPass} = "S3cr3t!";
 # Location where photocatalog is hosted.
 $settings->{website} = "@@WEBSITE@@";
 
-# URL for Twitter RSS feed.
-$settings->{rssFeed} = "@@RSSFEED@@";
+$settings->{sources} = [
+	{
+		id => 1,
+		type => 'WWW',
+		name => 'Android',
+		kml => {
+			position => 'loc',
+			line => 'path',
+			location => 'place',
+		},
+	},
+	{
+		id => 2,
+		type => 'InstaMapper',
+		name => 'InstaMapper',
+		deviceKey => '@@DEVICEKEY',
+		apiKey => '@@APIKEY@@',
+		kml => {
+			position => 'loc',
+			line => 'path',
+			location => 'place',
+		},
+	},
+	{
+		id => 3,
+		type => 'RSS',
+		name => 'Twitter',
+		deviceKey => 10,
+		file => '@@RSSFEED@@',
+		kml => {
+			container => 'twitter',
+		},
+	},
+];
 
 1;
