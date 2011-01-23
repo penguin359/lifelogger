@@ -37,27 +37,109 @@ use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use Getopt::Long;
+use LWP::UserAgent;
+use HTTP::Headers;
+use HTTP::Request;
+use HTTP::Request::Common;
 
 require 'common.pl';
 
+my $id;
 my $verbose = 0;
-my $result = GetOptions("verbose" => \$verbose);
+my $result = GetOptions(
+	"id=i" => \$id,
+	"verbose" => \$verbose);
+die "Usage: $0 [-id id] [-verbose] [foursquare.xml]" if !$result || @ARGV > 1;
 
 my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
+my $source;
 my $fourSquareFile = $self->{settings}->{fourSquareFeed};
 $fourSquareFile = shift if @ARGV;
 
+if(defined($fourSquareFile)) {
+	$source = {
+		id => 11,
+		name => "FourSquare",
+		deviceKey => 11,
+		file => $fourSquareFile
+	};
+} else {
+	$source = findSource($self, "FourSquare", $id);
+	$fourSquareFile = $source->{file};
+	$fourSquareFile = 'https://api.foursquare.com/v1/history'
+	    if !defined($fourSquareFile);
+}
+
+# This is a wrapper for LibXML allowing it to pull from URLs as well as
+# from files.  This was shamelessly stolen from XML::DOM.
+sub loadXML {
+	my($url) = @_;
+	my $parser = new XML::LibXML;
+
+	# Any other URL schemes?
+	if($url =~ /^(https?|ftp|wais|gopher|file):/) {
+		# Read the file from the web with LWP.
+		#
+		# Note that we read in the entire file, which may not be ideal
+		# for large files. LWP::UserAgent also provides a callback style
+		# request, which we could convert to a stream with a fork()...
+
+		my $result;
+		eval {
+			use LWP::UserAgent;
+
+			my $ua = LWP::UserAgent->new;
+
+			my $oauthData = {
+				protocol => 'oauth 1.0a',
+				app => 'FourSquare',
+				type => 'Resource',
+				params => {
+					token => $source->{token},
+					token_secret => $source->{tokenSecret},
+					request_url => $url,
+					request_method => 'GET',
+				},
+			};
+
+			my $headers = new HTTP::Headers;
+			$headers->header('Authorization', requestSign($oauthData));
+			# Load proxy settings from environment variables, i.e.:
+			# http_proxy, ftp_proxy, no_proxy etc. (see LWP::UserAgent(3))
+			# You need these to go thru firewalls.
+			$ua->env_proxy;
+			my $req = new HTTP::Request 'GET', $url, $headers;
+			#print Dumper($req);
+			my $response = $ua->request($req);
+			die "Bad request ".$response->status_line if !$response->is_success;
+
+			# Parse the result of the HTTP request
+			$result = $parser->parse_string($response->content);
+		};
+		if($@) {
+			die "Couldn't parsefile [$url] with LWP: $@";
+		}
+		return $result;
+	} else {
+		return $parser->parse_file($url);
+	}
+}
+
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='FourSquare']", $doc);
-my $parser = new XML::LibXML;
-my $fourSquareDoc = $parser->parse_file($fourSquareFile);
+my $containerPath = "/kml:kml/kml:Document/kml:Folder[kml:name='FourSquare']";
+my $containerId = $source->{kml}->{container};
+$containerPath = "//kml:Folder[\@id='$containerId']" if defined($containerId);
+my @base = $xc->findnodes($containerPath, $doc);
+#my $parser = new XML::LibXML;
+#my $fourSquareDoc = $parser->parse_file($fourSquareFile);
+my $fourSquareDoc = loadXML($fourSquareFile);
 my @items = $xc->findnodes('/checkins/checkin', $fourSquareDoc);
 
-die "Can't find base for FourSquare" if @base != 1;
+die "Can't find container for FourSquare" if @base != 1;
 
 sub getNode {
 	my($xc, $node, $path) = @_;
@@ -153,7 +235,8 @@ foreach my $item (reverse @items) {
 		$entry->{latitude} = $latitude;
 		$entry->{longitude} = $longitude;
 		$entry->{key} = 1;
-		$entry->{label} = 'FourSquare';
+		$entry->{source} = $source->{id};
+		$entry->{label} = $source->{name};
 		$entry->{timestamp} = $timestamp;
 		$entry->{altitude} = $altitude;
 		$entry->{speed} = '';
