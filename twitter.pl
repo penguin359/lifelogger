@@ -41,6 +41,7 @@ use LWP::UserAgent;
 use HTTP::Headers;
 use HTTP::Request;
 use HTTP::Request::Common;
+use Net::OAuth::Local;
 
 require 'common.pl';
 
@@ -141,7 +142,8 @@ my @items = $xc->findnodes('/rss/channel/item', $twitterDoc);
 
 die "Can't find container for Twitter" if @base != 1;
 
-#print "List:\n";
+my $newEntries = [];
+print "List:\n" if $self->{verbose};
 foreach my $item (reverse @items) {
 	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->nodeValue;
 	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->nodeValue;
