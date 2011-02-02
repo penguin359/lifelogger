@@ -150,9 +150,11 @@ foreach my $item (reverse @items) {
 	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->nodeValue;
 	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->nodeValue;
 	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->nodeValue;
+	my $point     = ${$xc->findnodes('georss:point/text()', $item)}[0];
+	$point        = $point->nodeValue if defined($point);
 	my $timestamp = parseDate($pubDate);
 
-	my @guidMatches = $xc->findnodes("/kml:kml/kml:Document/kml:Folder/kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $doc);
+	my @guidMatches = $xc->findnodes("kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $base[0]);
 	if(@guidMatches) {
 		die "Duplicate GUIDs" if @guidMatches > 1;
 		#my $kmlGuid = $guidMatches[0]->getNodeValue;
@@ -169,8 +171,17 @@ foreach my $item (reverse @items) {
 	$link  = escapeText($self, $link);
 
 	my $mark = createPlacemark($doc);
-	my $entry = closestEntry($self, $timestamp);
-	#addName($doc, $mark, $self->{subject});
+	my $entry = {};
+	if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
+		($entry->{latitude}, $entry->{longitude}) = ($1, $2);
+		$entry->{key} = $source->{deviceKey};
+		$entry->{source} = $source->{id};
+		$entry->{label} = $source->{name};
+		$entry->{timestamp} = $timestamp;
+		push @$newEntries, $entry;
+	} else {
+		$entry = closestEntry($self, $timestamp);
+	}
 	addName($doc, $mark, $title);
 	addDescription($doc, $mark, "<p>$descr</p><a href=\"$link\">Link</a>");
 	addTimestamp($doc, $mark, $timestamp);
