@@ -42,8 +42,6 @@ use HTTP::Request::Common;
 use JSON;
 use Data::Dumper;
 
-$JSON::UTF8 = 1;
-
 sub new {
 	my $class = shift;
 	bless { @_ }, $class;
@@ -56,6 +54,7 @@ sub post {
 	my $token = $self->{token};
 
 	my $json = new JSON;
+	$json->utf8(1);
 	my $req = POST "https://graph.facebook.com/$id/$type",
 		    Content_Type => 'form-data',
 		    Content      => [ access_token => $token,
@@ -63,13 +62,13 @@ sub post {
 				    ];
 	my $resp = $ua->request($req);
 	if(!$resp->is_success) {
-		my $obj = $json->jsonToObj($resp->content);
+		my $obj = $json->decode($resp->content);
 		die "Bad request: Failed to issue $type request: ".$obj->{error}->{type} . ".\n" . $obj->{error}->{message}
 		    if defined($obj->{error});
 		die "Bad request: $type request failed: " . $resp->status_line . ".\n" . $resp->content;
 		return;
 	}
-	my $obj = $json->jsonToObj($resp->content);
+	my $obj = $json->decode($resp->content);
 	die "Failed to issue $type request: ".$obj->{error}->{type} . ".\n" . $obj->{error}->{message}
 	    if defined($obj->{error});
 

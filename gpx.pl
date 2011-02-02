@@ -107,4 +107,17 @@ foreach(@tracks) {
 	$track++;
 }
 
-writeDataPC($self, $entries, $out);
+my $fieldsGPX = [
+    "source",
+    "label",
+    "id",
+    "seg",
+    "track",
+    "timestamp",
+    "latitude",
+    "longitude",
+    "altitude",
+    "speed",
+    "heading"];
+
+writeDataPC($self, $entries, $out, $fieldsGPX);
