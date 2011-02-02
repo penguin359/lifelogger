@@ -45,7 +45,7 @@ my $verbose = 0;
 my $result = GetOptions(
 	"id=i" => \$id,
 	"verbose" => \$verbose);
-die "Usage: $0 [-i id] [-v] [file.csv]" if !$result || @ARGV > 1;
+die "Usage: $0 [-id id] [-verbose] [rss.xml]" if !$result || @ARGV > 1;
 
 my $self = init();
 $self->{verbose} = $verbose;
@@ -58,7 +58,7 @@ $rssFile = shift if @ARGV;
 if(defined($rssFile)) {
 	$source = {
 		id => 10,
-		name => "Twitter",
+		name => "RSS",
 		deviceKey => 10,
 		file => $rssFile
 	};
@@ -80,7 +80,7 @@ my @items = $xc->findnodes('/rss/channel/item', $rssDoc);
 die "Can't find container for RSS" if @base != 1;
 
 my $newEntries = [];
-#print "List:\n";
+print "List:\n" if $self->{verbose};
 foreach my $item (reverse @items) {
 	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->nodeValue;
 	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->nodeValue;
@@ -98,13 +98,15 @@ foreach my $item (reverse @items) {
 		#print "Matching GUID: '$kmlGuid'\n";
 		next;
 	}
-	#print "[UTF8] " if utf8::is_utf8($descr);
-	#print "[VALID] " if utf8::valid($descr);
-	#print "I: '", $descr, "' - $link - $timestamp\n";
+	my $descrTest = $descr;
+	$descrTest = '' if !defined($descrTest);
+	#print "[UTF8] " if utf8::is_utf8($descrTest);
+	#print "[VALID] " if utf8::valid($descrTest);
+	print "I: '", $descrTest, "' - $link - $timestamp\n" if $self->{verbose};
 	#next;
 
 	$descr = escapeText($self, $descr);
-	$guid  = escapeText($self, $guid);
+	#$guid  = escapeText($self, $guid);
 	$link  = escapeText($self, $link);
 
 	my $mark = createPlacemark($doc);
@@ -112,11 +114,9 @@ foreach my $item (reverse @items) {
 	if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
 		($entry->{latitude}, $entry->{longitude}) = ($1, $2);
 		$entry->{key} = $source->{deviceKey};
+		$entry->{source} = $source->{id};
 		$entry->{label} = $source->{name};
 		$entry->{timestamp} = $timestamp;
-		#$entry->{altitude} = '';
-		#$entry->{speed} = '';
-		#$entry->{heading} = '';
 		push @$newEntries, $entry;
 	} else {
 		$entry = closestEntry($self, $timestamp);

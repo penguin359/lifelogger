@@ -41,6 +41,7 @@ use LWP::UserAgent;
 use HTTP::Headers;
 use HTTP::Request;
 use HTTP::Request::Common;
+use Net::OAuth::Local;
 
 require 'common.pl';
 
@@ -106,7 +107,7 @@ sub loadXML {
 			};
 
 			my $headers = new HTTP::Headers;
-			$headers->header('Authorization', requestSign($oauthData));
+			$headers->header('Authorization', requestSign($oauthData)->{authorization});
 			# Load proxy settings from environment variables, i.e.:
 			# http_proxy, ftp_proxy, no_proxy etc. (see LWP::UserAgent(3))
 			# You need these to go thru firewalls.
@@ -234,14 +235,11 @@ foreach my $item (reverse @items) {
 	if(defined($latitude) && defined($longitude)) {
 		$entry->{latitude} = $latitude;
 		$entry->{longitude} = $longitude;
-		$entry->{key} = 1;
+		$entry->{altitude} = $altitude;
+		$entry->{key} = $source->{deviceKey};
 		$entry->{source} = $source->{id};
 		$entry->{label} = $source->{name};
 		$entry->{timestamp} = $timestamp;
-		$entry->{altitude} = $altitude;
-		$entry->{speed} = '';
-		$entry->{heading} = '';
-		$entry->{altitude} = '' if !defined($entry->{altitude});
 		push @$newEntries, $entry;
 	} else {
 		$entry = closestEntry($self, $timestamp);
@@ -255,7 +253,7 @@ foreach my $item (reverse @items) {
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, $iconStyle);
 	addExtendedData($doc, $mark, { checkinId => $id });
-	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude});
+	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
 	addPlacemark($doc, $base[0], $mark);
 }
 

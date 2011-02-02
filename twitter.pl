@@ -107,7 +107,7 @@ sub loadXML {
 			};
 
 			my $headers = new HTTP::Headers;
-			$headers->header('Authorization', requestSign($oauthData));
+			$headers->header('Authorization', requestSign($oauthData)->{authorization});
 			# Load proxy settings from environment variables, i.e.:
 			# http_proxy, ftp_proxy, no_proxy etc. (see LWP::UserAgent(3))
 			# You need these to go thru firewalls.
@@ -161,13 +161,15 @@ foreach my $item (reverse @items) {
 		#print "Matching GUID: '$kmlGuid'\n";
 		next;
 	}
-	#print "[UTF8] " if utf8::is_utf8($descr);
-	#print "[VALID] " if utf8::valid($descr);
-	#print "I: '", $descr, "' - $link - $timestamp\n";
+	my $descrTest = $descr;
+	$descrTest = '' if !defined($descrTest);
+	#print "[UTF8] " if utf8::is_utf8($descrTest);
+	#print "[VALID] " if utf8::valid($descrTest);
+	print "I: '", $descrTest, "' - $link - $timestamp\n" if $self->{verbose};
 	#next;
 
 	$descr = escapeText($self, $descr);
-	$guid  = escapeText($self, $guid);
+	#$guid  = escapeText($self, $guid);
 	$link  = escapeText($self, $link);
 
 	my $mark = createPlacemark($doc);
