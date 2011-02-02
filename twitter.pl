@@ -65,19 +65,22 @@ if(defined($twitterFile)) {
 		id => 12,
 		name => "Twitter",
 		deviceKey => 12,
-		file => $twitterFile
+		file => $twitterFile,
 	};
 } else {
 	$source = findSource($self, "Twitter", $id);
 	$twitterFile = $source->{file};
-	$twitterFile = 'http://api.twitter.com/1/statuses/user_timeline.rss'
-	    if !defined($twitterFile);
+	if(!defined($twitterFile)) {
+		$twitterFile = 'http://api.twitter.com/1/statuses/user_timeline.rss';
+		$twitterFile .= '?screen_name='.$source->{screenName}
+		    if defined($source->{screenName});
+	}
 }
 
 # This is a wrapper for LibXML allowing it to pull from URLs as well as
 # from files.  This was shamelessly stolen from XML::DOM.
 sub loadXML {
-	my($url) = @_;
+	my($url, $source) = @_;
 	my $parser = new XML::LibXML;
 
 	# Any other URL schemes?
@@ -93,21 +96,25 @@ sub loadXML {
 			use LWP::UserAgent;
 
 			my $ua = LWP::UserAgent->new;
-
-			my $oauthData = {
-				protocol => 'oauth 1.0a',
-				app => 'Twitter',
-				type => 'Resource',
-				params => {
-					token => $source->{token},
-					token_secret => $source->{tokenSecret},
-					request_url => $url,
-					request_method => 'GET',
-				},
-			};
-
 			my $headers = new HTTP::Headers;
-			$headers->header('Authorization', requestSign($oauthData)->{authorization});
+
+			if(defined($source->{token}) &&
+			   defined($source->{tokenSecret})) {
+				my $oauthData = {
+					protocol => 'oauth 1.0a',
+					app => 'Twitter',
+					type => 'Resource',
+					params => {
+						token => $source->{token},
+						token_secret => $source->{tokenSecret},
+						request_url => $url,
+						request_method => 'GET',
+					},
+				};
+
+				$headers->header('Authorization', requestSign($oauthData)->{authorization});
+			}
+
 			# Load proxy settings from environment variables, i.e.:
 			# http_proxy, ftp_proxy, no_proxy etc. (see LWP::UserAgent(3))
 			# You need these to go thru firewalls.
