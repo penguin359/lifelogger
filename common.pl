@@ -749,4 +749,22 @@ sub findSource {
 #	die "Can't find base for RSS" if @base != 1;
 #}
 
+sub getNode {
+	my($xc, $node, $path) = @_;
+
+	my @nodeList = $xc->findnodes($path, $node);
+	warn "Multiple nodes for '$path' on " . $node->nodeName
+	    if @nodeList > 1;
+	return $nodeList[0] if @nodeList == 1;
+	return;
+}
+
+sub getTextNode {
+	my($xc, $node, $path) = @_;
+
+	$node = getNode($xc, $node, $path . "/text()");
+	return $node->nodeValue if defined($node);
+	return;
+}
+
 1;

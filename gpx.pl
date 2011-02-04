@@ -56,14 +56,6 @@ my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
-sub checkNode {
-	my($xc, $xpath, $point) = @_;
-
-	my @nodes = $xc->findnodes($xpath, $point);
-	return "" if @nodes < 1;
-	return $nodes[0]->nodeValue;
-}
-
 my $parser = new XML::LibXML;
 my $gpxDoc = $parser->parse_file($gpxFile);
 my $xc = loadXPath($self);
@@ -84,12 +76,12 @@ foreach(@tracks) {
 			$entry->{track}     = $track;
 			$entry->{source}    = $source;
 			$entry->{label}     = $name;
-			$entry->{latitude}  = checkNode($xc, '@lat', $_);
-			$entry->{longitude} = checkNode($xc, '@lon', $_);
-			$entry->{altitude}  = checkNode($xc, 'gpx:ele/text()', $_);
-			$entry->{speed}     = checkNode($xc, 'gpx:extensions/gpx:speed/text()', $_);
-			$entry->{heading}   = checkNode($xc, 'gpx:extensions/gpx:heading/text()', $_);
-			my $time            = checkNode($xc, 'gpx:time/text()', $_);
+			$entry->{latitude}  = getNodeText($xc, $_, '@lat');
+			$entry->{longitude} = getNodeText($xc, $_, '@lon');
+			$entry->{altitude}  = getNodeText($xc, $_, 'gpx:ele/text()');
+			$entry->{speed}     = getNodeText($xc, $_, 'gpx:extensions/gpx:speed/text()');
+			$entry->{heading}   = getNodeText($xc, $_, 'gpx:extensions/gpx:heading/text()');
+			my $time            = getNodeText($xc, $_, 'gpx:time/text()');
 			$entry->{timestamp} = parseIsoTime($self, $time);
 
 			if($entry->{latitude} eq "" ||

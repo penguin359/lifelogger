@@ -152,13 +152,12 @@ die "Can't find container for Twitter" if @base != 1;
 my $newEntries = [];
 print "List:\n" if $self->{verbose};
 foreach my $item (reverse @items) {
-	my $title     = ${$xc->findnodes('title/text()', $item)}[0]->nodeValue;
-	my $descr     = ${$xc->findnodes('description/text()', $item)}[0]->nodeValue;
-	my $pubDate   = ${$xc->findnodes('pubDate/text()', $item)}[0]->nodeValue;
-	my $guid      = ${$xc->findnodes('guid/text()', $item)}[0]->nodeValue;
-	my $link      = ${$xc->findnodes('link/text()', $item)}[0]->nodeValue;
-	my $point     = ${$xc->findnodes('georss:point/text()', $item)}[0];
-	$point        = $point->nodeValue if defined($point);
+	my $title     = getTextNode($xc, $item, 'title');
+	my $descr     = getTextNode($xc, $item, 'description');
+	my $pubDate   = getTextNode($xc, $item, 'pubDate');
+	my $guid      = getTextNode($xc, $item, 'guid');
+	my $link      = getTextNode($xc, $item, 'link');
+	my $point     = getTextNode($xc, $item, 'georss:point');
 	my $timestamp = parseDate($pubDate);
 
 	my @guidMatches = $xc->findnodes("kml:Placemark/kml:ExtendedData/kml:Data[\@name='guid']/kml:value[text()='$guid']/text()", $base[0]);
