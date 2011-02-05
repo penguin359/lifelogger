@@ -174,9 +174,8 @@ foreach my $item (reverse @items) {
 	print "I: '", $descrTest, "' - $link - $timestamp\n" if $self->{verbose};
 	#next;
 
-	$descr = escapeText($self, $descr);
-	#$guid  = escapeText($self, $guid);
-	$link  = escapeText($self, $link);
+	my $escapedDescr = escapeText($self, $descr);
+	my $escapedDescr  = escapeText($self, $link);
 
 	my $mark = createPlacemark($doc);
 	my $entry = {};
@@ -191,7 +190,7 @@ foreach my $item (reverse @items) {
 		$entry = closestEntry($self, $timestamp);
 	}
 	addName($doc, $mark, $title);
-	addDescription($doc, $mark, "<p>$descr</p><a href=\"$link\">Link</a>");
+	addDescription($doc, $mark, "<p>$escapedDescr</p><a href=\"$escapedDescr\">Link</a>");
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, 'twitter');
 	addExtendedData($doc, $mark, { guid => $guid });

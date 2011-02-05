@@ -227,10 +227,10 @@ foreach my $item (reverse @items) {
 		$entry = closestEntry($self, $timestamp);
 	}
 	addName($doc, $mark, $name);
-	$name = escapeText($self, $name);
-	$descr = escapeText($self, $descr) if defined($descr);
-	my $fullDescription = "<p><b>$name</b></p>";
-	$fullDescription .= "<p>$descr</p>" if defined($descr);
+	my $escapedName = escapeText($self, $name);
+	my $escapedDescr = escapeText($self, $descr) if defined($descr);
+	my $fullDescription = "<p><b>$escapedName</b></p>";
+	$fullDescription .= "<p>$escapedDescr</p>" if defined($descr);
 	addDescription($doc, $mark, $fullDescription);
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, $iconStyle);
