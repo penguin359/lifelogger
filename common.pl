@@ -41,42 +41,6 @@ use Image::ExifTool;
 #use DBI;
 use Data::Dumper;
 
-# Load default settings
-$settings = {};
-$settings->{apiKey} = "584014439054448247";
-$settings->{cwd} = "/var/www/htdocs";
-$settings->{backend} = "file";
-$settings->{dataSource} = "DBI:Pg:dbname=photocatalog;host=localhost";
-$settings->{dbUser} = "user";
-$settings->{dbPass} = "S3cr3t!";
-$settings->{website} = "http://www.example.org/";
-#$settings->{rssFeed} = "http://twitter.com/statuses/user_timeline/783214.rss";
-
-require 'settings.pl';
-
-# Convert from old-style settings file to new-style.
-$settings->{apiKey} = $apiKey if defined($apiKey);
-$settings->{cwd} = $cwd if defined($cwd);
-$settings->{dataSource} = $dataSource if defined($dataSource);
-$settings->{dbUser} = $dbUser if defined($dbUser);
-$settings->{dbPass} = $dbPass if defined($dbPass);
-
-require "backends/$settings->{backend}.pl";
-
-my $files = {};
-$files->{lock} = "$settings->{cwd}/lock";
-$files->{kml} = "$settings->{cwd}/live.kml";
-$files->{rss} = "$settings->{cwd}/live.rss";
-$files->{atom} = "$settings->{cwd}/live.atom";
-
-my $sources = [
-	{
-		id => '1',
-		type => 'InstaMapper',
-		apiKey => $settings->{apiKey},
-	},
-];
-
 sub createPlacemark {
 	my($doc) = @_;
 
@@ -345,13 +309,106 @@ sub openDB {
 	$self->{dbh} = $dbh;
 }
 
+sub loadXmlSettings {
+	my($self) = @_;
+
+	my $xc = loadXPath($self);
+	my $parser = new XML::LibXML;
+	my $doc = $parser->parse_file("settings.xml");
+	my $root = $doc->documentElement();
+
+	#my $settings = $self->{settings};
+	my $settings = {};
+	foreach("cwd", "backend", "dataSource", "dbUser", "dbPass", "website") {
+		$settings->{$_} = getTextNode($xc, $root, $_);
+		delete $settings->{$_} if !defined($settings->{$_});
+	}
+	
+	my $sources = [];
+	my @sourceNodes = $xc->findnodes('sources/source', $root);
+	foreach my $node (@sourceNodes) {
+		my $source = {};
+		foreach("id", "type", "name", "deviceKey", "apiKey", "token", "tokenSecret", "file", "url") {
+			$source->{$_} = getTextNode($xc, $node, $_);
+			delete $source->{$_} if !defined($source->{$_});
+		}
+		foreach("position", "line", "location", "container") {
+			$source->{kml}->{$_} = getTextNode($xc, $node, "kml/".$_);
+			delete $source->{kml}->{$_} if !defined($source->{kml}->{$_});
+		}
+		push @$sources, $source;
+	}
+	$settings->{sources} = $sources;
+
+	print Dumper($settings);
+}
+
+sub loadSettings {
+	my($self) = @_;
+
+	$settings = $self->{settings};
+	
+	if(!defined($settings)) {
+		# Load default settings
+		$settings = {};
+		$settings->{apiKey} = "584014439054448247";
+		$settings->{cwd} = "/var/www/htdocs";
+		$settings->{backend} = "file";
+		$settings->{dataSource} = "DBI:Pg:dbname=photocatalog;host=localhost";
+		$settings->{dbUser} = "user";
+		$settings->{dbPass} = "S3cr3t!";
+		$settings->{website} = "http://www.example.org/";
+		#$settings->{rssFeed} = "http://twitter.com/statuses/user_timeline/783214.rss";
+
+		$settings->{sources} = [
+			{
+				id => '1',
+				type => 'InstaMapper',
+				apiKey => $settings->{apiKey},
+			},
+		];
+	}
+
+	print Dumper($settings);
+	eval {
+		print Dumper($settings);
+		#use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
+		require 'settings.pl';
+		print Dumper($settings);
+
+		# Convert from old-style settings file to new-style.
+		$settings->{apiKey} = $apiKey if defined($apiKey);
+		$settings->{cwd} = $cwd if defined($cwd);
+		$settings->{dataSource} = $dataSource if defined($dataSource);
+		$settings->{dbUser} = $dbUser if defined($dbUser);
+		$settings->{dbPass} = $dbPass if defined($dbPass);
+	};
+	print Dumper($settings);
+	if($@) {
+		print "Trying XML...\n";
+		loadXmlSettings($self);
+	}
+
+	require "backends/$settings->{backend}.pl";
+
+	my $files = {};
+	$files->{lock} = "$settings->{cwd}/lock";
+	$files->{kml} = "$settings->{cwd}/live.kml";
+	$files->{rss} = "$settings->{cwd}/live.rss";
+	$files->{atom} = "$settings->{cwd}/live.atom";
+
+	$settings->{files} = $files;
+
+	exit 0;
+}
+
 sub init {
 	my $self = {};
 
-	$self->{settings} = $settings;
-	$self->{files} = $files;
-	$self->{sources} = $settings->{sources};
-	$self->{sources} = $sources if !defined($self->{sources});
+	loadSettings($self);
+
+	$self->{files} = $self->{settings}->{files};
+	$self->{sources} = $self->{settings}->{sources};
 
 	$self->{sourcesId} = {};
 	foreach(@{$self->{sources}}) {

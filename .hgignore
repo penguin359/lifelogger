@@ -13,4 +13,5 @@
 ^settings.pl$
 ^tags$
 ^timestamp$
+^tmp/
 ^uploads/
