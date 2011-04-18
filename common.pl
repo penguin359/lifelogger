@@ -339,8 +339,6 @@ sub loadXmlSettings {
 		push @$sources, $source;
 	}
 	$settings->{sources} = $sources;
-
-	print Dumper($settings);
 }
 
 sub loadSettings {
@@ -369,12 +367,8 @@ sub loadSettings {
 		];
 	}
 
-	print Dumper($settings);
 	eval {
-		print Dumper($settings);
-		#use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 		require 'settings.pl';
-		print Dumper($settings);
 
 		# Convert from old-style settings file to new-style.
 		$settings->{apiKey} = $apiKey if defined($apiKey);
@@ -383,9 +377,8 @@ sub loadSettings {
 		$settings->{dbUser} = $dbUser if defined($dbUser);
 		$settings->{dbPass} = $dbPass if defined($dbPass);
 	};
-	print Dumper($settings);
 	if($@) {
-		print "Trying XML...\n";
+		print "Trying XML Configuration...\n" if $self->{verbose};
 		loadXmlSettings($self);
 	}
 
@@ -399,8 +392,6 @@ sub loadSettings {
 
 	$settings->{files} = $files;
 
-	exit 0;
-}
 
 sub init {
 	my $self = {};
