@@ -317,8 +317,8 @@ sub loadXmlSettings {
 	my $doc = $parser->parse_file("settings.xml");
 	my $root = $doc->documentElement();
 
-	#my $settings = $self->{settings};
-	my $settings = {};
+	my $settings = $self->{settings};
+	#my $settings = {};
 	foreach("cwd", "backend", "dataSource", "dbUser", "dbPass", "website") {
 		$settings->{$_} = getTextNode($xc, $root, $_);
 		delete $settings->{$_} if !defined($settings->{$_});
@@ -344,8 +344,8 @@ sub loadXmlSettings {
 sub loadSettings {
 	my($self) = @_;
 
-	$settings = $self->{settings};
-	
+	#$settings = $self->{settings};
+
 	if(!defined($settings)) {
 		# Load default settings
 		$settings = {};
@@ -367,7 +367,10 @@ sub loadSettings {
 		];
 	}
 
+	$self->{settings} = $settings;
+
 	eval {
+		print "Trying Perl Configuration...\n" if $self->{verbose};
 		require 'settings.pl';
 
 		# Convert from old-style settings file to new-style.
@@ -392,6 +395,8 @@ sub loadSettings {
 
 	$settings->{files} = $files;
 
+	print Dumper($settings);
+}
 
 sub init {
 	my $self = {};
