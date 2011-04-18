@@ -114,7 +114,7 @@ sub parseDataBody {
 	if($needSource) {
 		my $sources = $self->{sources};
 		$multisource = 1
-		    if @$sources > 0 ||
+		    if @$sources > 1 ||
 		       (@$sources == 1 &&
 			lc $sources->[0]->{type} eq "instamapper" &&
 			defined($sources->[0]->{deviceKey}));

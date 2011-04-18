@@ -357,20 +357,12 @@ sub loadSettings {
 		$settings->{dbPass} = "S3cr3t!";
 		$settings->{website} = "http://www.example.org/";
 		#$settings->{rssFeed} = "http://twitter.com/statuses/user_timeline/783214.rss";
-
-		$settings->{sources} = [
-			{
-				id => '1',
-				type => 'InstaMapper',
-				apiKey => $settings->{apiKey},
-			},
-		];
 	}
 
 	$self->{settings} = $settings;
 
 	eval {
-		print "Trying Perl Configuration...\n" if $self->{verbose};
+		print "Trying Perl Configuration... " if $self->{verbose};
 		require 'settings.pl';
 
 		# Convert from old-style settings file to new-style.
@@ -379,11 +371,21 @@ sub loadSettings {
 		$settings->{dataSource} = $dataSource if defined($dataSource);
 		$settings->{dbUser} = $dbUser if defined($dbUser);
 		$settings->{dbPass} = $dbPass if defined($dbPass);
+
+		# Create artificial source for pre-multisource configs.
+		$settings->{sources} = [
+			{
+				id => '1',
+				type => 'InstaMapper',
+				apiKey => $settings->{apiKey},
+			},
+		] if !defined($settings->{sources});
 	};
 	if($@) {
-		print "Trying XML Configuration...\n" if $self->{verbose};
+		print "No.\nTrying XML Configuration... " if $self->{verbose};
 		loadXmlSettings($self);
 	}
+	print "Found.\n" if $self->{verbose};
 
 	require "backends/$settings->{backend}.pl";
 
@@ -395,12 +397,13 @@ sub loadSettings {
 
 	$settings->{files} = $files;
 
-	print Dumper($settings);
+	#print Dumper($settings);
 }
 
 sub init {
 	my $self = {};
 
+	#$self->{verbose} = 1;
 	loadSettings($self);
 
 	$self->{files} = $self->{settings}->{files};

@@ -187,6 +187,11 @@ if($latitude) {
 	($newEntries) = parseData($self, \@lines);
 }
 
+if(!@$newEntries) {
+	print "No new data, nothing to do.\n" if $self->{verbose};
+	exit 0;
+}
+
 my $seg = 1;
 my $lastTimestamp = lastTimestamp($self);
 my $diff = 300;
@@ -213,8 +218,7 @@ if(@locationBase > 1) {
 } elsif(@locationBase == 1) {
 	print "Adding placemarks.\n" if $self->{verbose} && @$newEntries && !$noMark;
 	my $kmlEntries = [];
-	push @$kmlEntries, pop @$newEntries if @$newEntries && !$noMark;
-	push @$newEntries, @$kmlEntries;
+	$$kmlEntries[0] = $$newEntries[-1] if @$newEntries && !$noMark;
 	foreach my $entry (@$kmlEntries) {
 		next if !defined($entry->{latitude}) or $entry->{latitude} == 0;
 		my $mark = createPlacemark($doc);
@@ -241,7 +245,7 @@ my @lineNode = $xc->findnodes($linePath, $doc);
 $lineNode[0]->appendData($coordStr);
 
 print "Updating my location.\n" if $self->{verbose};
-my $currentPosition = pop @$newEntries;
+my $currentPosition = $$newEntries[-1];
 if(defined($currentPosition)) {
 	my $positionPath = "/kml:kml/kml:Document/kml:Placemark[kml:styleUrl='#position']/kml:Point/kml:coordinates/text()";
 	my $positionId = $source->{kml}->{position};
