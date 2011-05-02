@@ -28,9 +28,9 @@
 
 package Facebook;
 
-use 5.008;
-use warnings;
+use 5.008_001;
 use strict;
+use warnings;
 
 use utf8;
 use open ':utf8', ':std';

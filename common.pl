@@ -26,14 +26,14 @@
 #
 
 
-use 5.008;
-use warnings;
+use 5.008_001;
 use strict;
+use warnings;
 
 use utf8;
 use open ':utf8', ':std';
 use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
-use Fcntl ':flock';
+use Fcntl qw(:flock);
 use POSIX qw(strftime);
 use Time::Local;
 use XML::LibXML;

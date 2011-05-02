@@ -31,8 +31,8 @@
 package Net::OAuth::Local;
 
 use 5.008_001;
-use warnings;
 use strict;
+use warnings;
 
 #use utf8;
 #use open ':utf8', ':std';

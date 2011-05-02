@@ -29,8 +29,8 @@
 
 
 use 5.008_001;
-use warnings;
 use strict;
+use warnings;
 
 use bytes;
 #use utf8;
