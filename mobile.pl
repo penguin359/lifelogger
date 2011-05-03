@@ -36,18 +36,14 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 
 require 'common.pl';
 
-my $verbose = 0;
-my $result = GetOptions("verbose" => \$verbose);
+my $self = init();
+die $self->{usage} if @ARGV > 0;
+lockKml($self);
 
 my $mobileFile = "mobile.kml";
-
-my $self = init();
-$self->{verbose} = $verbose;
-lockKml($self);
 
 my $doc = loadKml($self);
 my $xc = loadXPath($self);

@@ -102,10 +102,27 @@ Plugin Support
 Duplicate detection
 Filename collision handling
 Feed Validation
+lockKml timeout
+Flickr/Facebook config
+Generic cmdline options support
+Make files use full path and path configurable
+  mobile.kml
+  images.csv
+  backend files
+    timestamp
+    locations.csv
+Triple check timestamp code
+Add bounds detection for map
+Filter bogus points
+Add app info hash
+  Name
+  Description
+  Usage
+  Option
+Add -help
 and much more...
 
 Windows Issues:
-  Need wget (Fixed)
   Easily installing dependencies
     XML::RSS and XML::Atom are particularly problematic
   Pathnames use backslash (Fixed?)

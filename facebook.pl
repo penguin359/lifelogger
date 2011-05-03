@@ -36,7 +36,6 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 use File::Basename;
 use LWP::UserAgent 5.810;
 use HTTP::Cookies;
@@ -45,13 +44,8 @@ use Facebook;
 
 require 'common.pl';
 
-my $verbose = 0;
-my $result = GetOptions(
-	"verbose" => \$verbose);
-die "Usage: $0" if !$result || @ARGV > 1;
-
 my $self = init();
-$self->{verbose} = $verbose;
+die $self->{usage} if @ARGV > 0;
 lockKml($self);
 
 sub postPhoto {

@@ -36,25 +36,22 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 
 require 'common.pl';
 
+my $usage = "[-name name] [-source source] [-out gps.csv] gps.gpx";
 my $name = "GPX Data";
 my $source = 0;
-my $verbose = 0;
 my $out = "gps-log.csv";
-my $result = GetOptions("name=s" => \$name,
-	   "source=i" => \$source,
-	   "verbose" => \$verbose,
-	   "out=s" => \$out);
+
+my $self = init($usage, {"name=s" => \$name,
+			 "source=i" => \$source,
+			 "out=s" => \$out});
+die $self->{usage} if @ARGV > 1;
+lockKml($self);
 
 my $gpxFile = "gps-log.gpx";
 $gpxFile = shift if @ARGV;
-
-my $self = init();
-$self->{verbose} = $verbose;
-lockKml($self);
 
 my $parser = new XML::LibXML;
 my $gpxDoc = $parser->parse_file($gpxFile);

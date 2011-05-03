@@ -40,6 +40,7 @@ use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 require 'common.pl';
 
 my $self = init();
+die $self->{usage} if @ARGV > 0;
 print "Waiting for lock...\n";
 lockKml($self);
 print "Locked for 10 minutes.\n";

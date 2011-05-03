@@ -35,6 +35,7 @@ use open ':utf8', ':std';
 use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl qw(:flock);
 use POSIX qw(strftime);
+use Getopt::Long;
 use Time::Local;
 use XML::LibXML;
 use Image::ExifTool;
@@ -401,9 +402,20 @@ sub loadSettings {
 }
 
 sub init {
+	my($usage, $options) = @_;
+
 	my $self = {};
 
-	#$self->{verbose} = 1;
+	my $globalUsage = "Usage: $0 [-config name] [-debug] [-verbose]";
+	my $globalOptions = {
+		"config=s" => \$self->{config},
+		"debug" => \$self->{debug},
+		"verbose" => \$self->{verbose},
+	};
+	$self->{usage} = $globalUsage;
+	$self->{usage} .= " ".$usage if defined $usage;
+	GetOptions(%$globalOptions, %$options) or die $self->{usage};
+
 	loadSettings($self);
 
 	$self->{files} = $self->{settings}->{files};

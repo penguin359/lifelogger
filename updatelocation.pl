@@ -36,7 +36,6 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 use Net::OAuth::Local;
 use HTTP::Request;
 use LWP::UserAgent 5.810;
@@ -45,23 +44,19 @@ use JSON;
 
 require 'common.pl';
 
+my $usage = "[-id id] [-no-mark | -slow] [-latitude] [-www] [file.csv]";
 my $id;
-my $slow = 0;
 my $noMark = 0;
+my $slow = 0;
 my $latitude = 0;
 my $www = 0;
-my $verbose = 0;
-my $result = GetOptions(
-	"id=i" => \$id,
-	"slow" => \$slow,
-	"no-mark" => \$noMark,
-	"latitude" => \$latitude,
-	"www" => \$www,
-	"verbose" => \$verbose);
-die "Usage: $0 [-id id] [-no-mark | -slow] [-verbose] [file.csv]" if !$result || @ARGV > 1;
 
-my $self = init();
-$self->{verbose} = $verbose;
+my $self = init($usage, {"id=i" => \$id,
+			 "no-mark" => \$noMark,
+			 "slow" => \$slow,
+			 "latitude" => \$latitude,
+			 "www" => \$www});
+die $self->{usage} if @ARGV > 1;
 lockKml($self);
 
 sub updateLatitudeLocation {

@@ -36,18 +36,13 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 
 require 'common.pl';
 
-my $verbose = 0;
-my $result = GetOptions("verbose" => \$verbose);
+my $usage = "image.jpg...";
 
-if(!defined($ARGV[0])) {
-	die "Usage: $0 image.jpg";
-}
-my $self = init();
-$self->{verbose} = $verbose;
+my $self = init($usage);
+die $self->{usage} if @ARGV == 0;
 lockKml($self);
 
 eval { processImage($self, $_); 1; } || warn $@ foreach(@ARGV);

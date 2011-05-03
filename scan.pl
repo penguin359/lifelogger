@@ -36,15 +36,12 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 
 require 'common.pl';
 
-my $verbose = 0;
-my $result = GetOptions("verbose" => \$verbose);
+my $usage = "[image.jpg ...]";
 
 my $self = init();
-$self->{verbose} = $verbose;
 lockKml($self);
 
 sub addImageScan {

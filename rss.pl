@@ -36,19 +36,14 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 
 require 'common.pl';
 
+my $usage = "[-id id] [rss.xml]";
 my $id;
-my $verbose = 0;
-my $result = GetOptions(
-	"id=i" => \$id,
-	"verbose" => \$verbose);
-die "Usage: $0 [-id id] [-verbose] [rss.xml]" if !$result || @ARGV > 1;
 
-my $self = init();
-$self->{verbose} = $verbose;
+my $self = init($usage, {"id=i" => \$id});
+die $self->{usage} if @ARGV > 1;
 lockKml($self);
 
 my $source;

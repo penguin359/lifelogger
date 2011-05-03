@@ -36,7 +36,6 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 use LWP::UserAgent;
 use HTTP::Headers;
 use HTTP::Request;
@@ -45,15 +44,11 @@ use Net::OAuth::Local;
 
 require 'common.pl';
 
+my $usage = "[-id id] [twitter.xml]";
 my $id;
-my $verbose = 0;
-my $result = GetOptions(
-	"id=i" => \$id,
-	"verbose" => \$verbose);
-die "Usage: $0 [-id id] [-verbose] [twitter.xml]" if !$result || @ARGV > 1;
 
-my $self = init();
-$self->{verbose} = $verbose;
+my $self = init($usage, {"id=i" => \$id});
+die $self->{usage} if @ARGV > 1;
 lockKml($self);
 
 my $source;

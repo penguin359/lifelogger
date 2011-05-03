@@ -36,18 +36,16 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-use Getopt::Long;
 use MIME::Parser;
 use MIME::WordDecoder;
 use Encode;
 
 require 'common.pl';
 
-my $verbose = 0;
-my $result = GetOptions("verbose" => \$verbose);
+my $usage = "[message.eml]";
 
-my $self = init();
-$self->{verbose} = $verbose;
+my $self = init($usage);
+die $self->{usage} if @ARGV > 1;
 lockKml($self);
 
 my $descrText = "";

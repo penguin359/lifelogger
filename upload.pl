@@ -38,7 +38,6 @@ use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use CGI qw(:standard);
-use Getopt::Long;
 use Data::Dumper;
 
 #binmode STDIN;
@@ -51,7 +50,6 @@ print "Content-type: text/plain; charset=utf-8\r\n\r\n";
 require 'common.pl';
 
 my $verbose = 0;
-#my $result = GetOptions("verbose" => \$verbose);
 
 #print "Hi!\n";
 
