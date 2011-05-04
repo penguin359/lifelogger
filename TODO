@@ -120,6 +120,9 @@ Add app info hash
   Usage
   Option
 Add -help
+Non-JPEG support
+Improved REST API for PhotoCatalog for Android
+  Query list of valid sources
 and much more...
 
 Windows Issues:

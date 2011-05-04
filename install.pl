@@ -83,7 +83,7 @@ sub installLib {
 	}
 }
 
-print "Installing Photocatalog\n";
+print "Installing PhotoCatalog\n";
 print "\n";
 print "Checking dependencies...\n";
 foreach my $lib (
@@ -159,6 +159,7 @@ my $email = ask("E-Mail", "webmaster\@example.org");
 my $website = ask("Website", "http://www.example.org/");
 my $description = ask("Description", "My life is very adventurous!");
 my $apiKey = ask("InstaMapper API Key", "584014439054448247");
+my $deviceKey = ask("InstaMapper Device Key", "0071543339995");
 my $cwd = getcwd;
 
 my $rssFeed;
@@ -202,8 +203,9 @@ print " E-Mail:                 $email\n";
 print " Website:                $website\n";
 print " Description:            $description\n";
 print " InstaMapper API Key:    $apiKey\n";
+print " InstaMapper Device Key: $deviceKey\n";
 print " Twitter RSS Feed:       $rssFeed\n";
-print " Photocatalog Directory: $cwd\n";
+print " PhotoCatalog Directory: $cwd\n";
 my $ans = ask("Is this correct", "yes");
 exit 0 if $ans !~ /y(es)?/i;
 print "\n";
@@ -237,6 +239,8 @@ sub installFile {
 				$var = $title;
 			} elsif($var eq "APIKEY") {
 				$var = $apiKey;
+			} elsif($var eq "DEVICEKEY") {
+				$var = $deviceKey;
 			} elsif($var eq "CWD") {
 				$var = $cwd;
 			} elsif($var eq "RSSFEED") {
@@ -260,3 +264,7 @@ installFile("live.kml");
 installFile("live.rss");
 installFile("location.csv");
 installFile("settings.pl");
+
+print "\n";
+print "PhotoCatalog installed.\n";
+print "Take a look at INSTALL for further directions.\n";

@@ -1,0 +1,38 @@
+--fjd3Fb5Xr8Hfrb6hnDv3Lg
+Content-Disposition: form-data; name="source"
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+5
+--fjd3Fb5Xr8Hfrb6hnDv3Lg
+Content-Disposition: form-data; name="type"
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+gps
+--fjd3Fb5Xr8Hfrb6hnDv3Lg
+Content-Disposition: form-data; name="file"
+Content-Type: application/octet-stream
+Content-Transfer-Encoding: binary
+
+PhotoCatalog v1.0
+id,timestamp,latitude,longitude,altitude,accuracy,bearing,speed,satellites
+10,1294243224000,6.422,-125.084,0,,,,
+11,1294243226000,6.422,-125.084,0,,,,
+12,1294243228000,6.422,-124.084,0,,,,
+13,1294243229000,6.422,-124.084,0,,,,
+14,1294243230000,6.422,-124.084,0,,,,
+15,1294243234000,6.422,-124.084,0,,,,
+16,1294243235000,6.422,-124.084,0,,,,
+17,1294243236000,6.422,-124.084,0,,,,
+18,1294243237000,6.422,-124.084,0,,,,
+19,1294243238000,6.422,-124.084,0,,,,
+20,1294243240000,6.422,-124.084,0,,,,
+
+--fjd3Fb5Xr8Hfrb6hnDv3Lg
+Content-Disposition: form-data; name="finish"
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 8bit
+
+1
+--fjd3Fb5Xr8Hfrb6hnDv3Lg--
