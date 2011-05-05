@@ -626,7 +626,7 @@ sub processImage {
 	}
 	};
 	if($@) {
-		die "GPS Prob: $@\n";
+		die "GPS Problem: $@";
 	}
 
 	#Remove Thumbnail:

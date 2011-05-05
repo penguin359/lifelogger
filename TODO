@@ -128,6 +128,7 @@ Send email to Android from Perl
 Does Android auto-fill type for content:?
 Check on FileSpec, Basename, and my use of paths.
 Test with chdir('/var/empty') and drop $cwd
+Check for undefined Subject and Date in email.pl
 and much more...
 
 Windows Issues:

@@ -500,6 +500,7 @@ sub closestEntry {
 	my($self, $timestamp) = @_;
 
 	my $entries = readData($self);
+	return undef if @$entries == 0;
 	my $matchEntry = $entries->[0];
 	my $offset = abs($matchEntry->{timestamp} - $timestamp);
 	foreach my $entry (@$entries) {

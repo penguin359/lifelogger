@@ -79,10 +79,10 @@ sub scanEntity {
 		}
 		close $outFd;
 		eval {
-			$filename = processImage($self, "tmp/$filename", $self->{subject});
-			die "Could not process image 'tmp/$filename'" if !defined($filename);
-			addImage($filename, $self, $doc, $base, $self->{subject}, $descrText);
-			createThumbnails($self, $filename);
+			my $newFilename = processImage($self, "tmp/$filename", $self->{subject});
+			die "Could not process image 'tmp/$filename'" if !defined($newFilename);
+			addImage($newFilename, $self, $doc, $base, $self->{subject}, $descrText);
+			createThumbnails($self, $newFilename);
 		};
 	} elsif($entity->head->mime_type eq "text/plain") {
 		print "Found text\n" if $self->{verbose};
