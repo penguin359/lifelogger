@@ -224,7 +224,7 @@ foreach my $item (reverse @items) {
 	my $escapedName = escapeText($self, $name);
 	my $escapedDescr = escapeText($self, $descr) if defined($descr);
 	my $fullDescription = "<p><b>$escapedName</b></p>";
-	$fullDescription .= "<p>$escapedDescr</p>" if defined($descr);
+	$fullDescription .= "<p>$escapedDescr</p>" if defined($escapedDescr);
 	addDescription($doc, $mark, $fullDescription);
 	addTimestamp($doc, $mark, $timestamp);
 	addStyle($doc, $mark, $iconStyle);
