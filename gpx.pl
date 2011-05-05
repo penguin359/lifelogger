@@ -36,8 +36,7 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-
-require 'common.pl';
+use Common;
 
 my $usage = "[-name name] [-source source] [-out gps.csv] gps.gpx";
 my $name = "GPX Data";

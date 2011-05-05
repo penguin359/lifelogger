@@ -36,11 +36,10 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
+use Common;
 use MIME::Parser;
 use MIME::WordDecoder;
 use Encode;
-
-require 'common.pl';
 
 my $usage = "[message.eml]";
 

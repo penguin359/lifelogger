@@ -36,13 +36,12 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
+use Common;
 use LWP::UserAgent;
 use HTTP::Headers;
 use HTTP::Request;
 use HTTP::Request::Common;
 use Net::OAuth::Local;
-
-require 'common.pl';
 
 my $usage = "[-id id] [twitter.xml]";
 my $id;

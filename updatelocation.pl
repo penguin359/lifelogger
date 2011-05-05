@@ -36,13 +36,12 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
+use Common;
 use Net::OAuth::Local;
 use HTTP::Request;
 use LWP::UserAgent 5.810;
 use HTTP::Request::Common;
 use JSON;
-
-require 'common.pl';
 
 my $usage = "[-id id] [-no-mark | -slow] [-latitude] [-www] [file.csv]";
 my $id;

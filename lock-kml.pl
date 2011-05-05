@@ -36,8 +36,7 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
-
-require 'common.pl';
+use Common;
 
 my $self = init();
 die $self->{usage} if @ARGV > 0;

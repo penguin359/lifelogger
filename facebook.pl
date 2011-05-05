@@ -36,13 +36,12 @@ use utf8;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
+use Common;
 use File::Basename;
 use LWP::UserAgent 5.810;
 use HTTP::Cookies;
 use HTTP::Request::Common;
 use Facebook;
-
-require 'common.pl';
 
 my $self = init();
 die $self->{usage} if @ARGV > 0;

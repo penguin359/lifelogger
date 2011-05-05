@@ -37,6 +37,7 @@ use bytes;
 use open ':utf8', ':std';
 use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
+use Common;
 use CGI qw(:standard);
 use Data::Dumper;
 
@@ -46,8 +47,6 @@ binmode \*STDIN, ":bytes";
 print "Content-type: text/plain; charset=utf-8\r\n\r\n";
 #system('env');
 
-
-require 'common.pl';
 
 my $verbose = 0;
 

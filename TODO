@@ -123,6 +123,11 @@ Add -help
 Non-JPEG support
 Improved REST API for PhotoCatalog for Android
   Query list of valid sources
+Wake PhotoCatalog on SMS
+Send email to Android from Perl
+Does Android auto-fill type for content:?
+Check on FileSpec, Basename, and my use of paths.
+Test with chdir('/var/empty') and drop $cwd
 and much more...
 
 Windows Issues:
