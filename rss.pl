@@ -41,7 +41,7 @@ use Common;
 my $usage = "[-id id] [rss.xml]";
 my $id;
 
-my $self = init($usage, {"id=i" => \$id});
+my $self = init($usage, {"id=s" => \$id});
 die $self->{usage} if @ARGV > 1;
 lockKml($self);
 

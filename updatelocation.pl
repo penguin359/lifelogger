@@ -50,7 +50,7 @@ my $slow = 0;
 my $latitude = 0;
 my $www = 0;
 
-my $self = init($usage, {"id=i" => \$id,
+my $self = init($usage, {"id=s" => \$id,
 			 "no-mark" => \$noMark,
 			 "slow" => \$slow,
 			 "latitude" => \$latitude,

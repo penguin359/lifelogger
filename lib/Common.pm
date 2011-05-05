@@ -419,16 +419,27 @@ sub init {
 	loadSettings($self);
 
 	$self->{files} = $self->{settings}->{files};
-	$self->{sources} = $self->{settings}->{sources};
+	my $sources = $self->{settings}->{sources};
 
+	$self->{sources} = [];
 	$self->{sourcesId} = {};
-	foreach(@{$self->{sources}}) {
+	$self->{sourcesName} = {};
+	foreach(@$sources) {
+		next if !defined($_->{type});
+		$_->{type} = lc $_->{type};
 		next if !defined($_->{id});
 		if(defined($self->{sourcesId}->{$_->{id}})) {
-			warn "Duplicate source id";
+			warn "Duplicate source id $_->{id}";
 			next;
 		}
 		$self->{sourcesId}->{$_->{id}} = $_;
+		push @{$self->{sources}}, $_;
+		next if !defined($_->{name});
+		if(defined($self->{sourcesName}->{$_->{name}})) {
+			warn "Duplicate source name $_->{name}";
+			next;
+		}
+		$self->{sourcesName}->{$_->{name}} = $_;
 	}
 
 	chdir $settings->{cwd};
@@ -784,13 +795,15 @@ sub findSource {
 	my $source;
 	if(defined($id)) {
 		$source = $self->{sourcesId}->{$id};
+		$source = $self->{sourcesName}->{$id}
+		    if !defined($source);
 		die "Source $id is not configured.\n"
 		    if !defined($source);
-		die "Source $id is not $type.\n"
-		    if lc $source->{type} ne lc $type;
+		die "Source $id is not type $type.\n"
+		    if $source->{type} ne lc $type;
 	} else {
 		foreach(@{$self->{sources}}) {
-			if(lc $_->{type} eq lc $type) {
+			if($_->{type} eq lc $type) {
 				$source = $_;
 				last;
 			}
