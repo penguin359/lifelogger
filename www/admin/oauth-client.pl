@@ -110,6 +110,7 @@ sub handleFourSquare {
 
 my $apps = {
 	foursquare => {
+		version => '1.0a',
                 request => 'http://foursquare.com/oauth/request_token',
                 authorize => 'http://foursquare.com/oauth/authorize',
                 access => 'http://foursquare.com/oauth/access_token',
@@ -119,7 +120,8 @@ my $apps = {
 		#},
 		handler => \&handleFourSquare,
 	},
-	google => {
+	latitude => {
+		version => '1.0a',
 		request => 'https://www.google.com/accounts/OAuthGetRequestToken',
 		authorize => 'https://www.google.com/latitude/apps/OAuthAuthorizeToken?domain=www.north-winds.org&location=all&granularity=best',
 		access => 'https://www.google.com/accounts/OAuthGetAccessToken',
@@ -131,6 +133,7 @@ my $apps = {
 		handler => \&handleLatitude,
 	},
 	twitter => {
+		version => '1.0a',
 		request => 'https://api.twitter.com/oauth/request_token',
 		authorize => 'https://api.twitter.com/oauth/authorize',
 		access => 'https://api.twitter.com/oauth/access_token',
@@ -140,6 +143,7 @@ my $apps = {
 		handler => \&handleXML,
 	},
 	statusnet => {
+		version => '1.0',
 		request => 'http://status.north-winds.org/api/oauth/request_token',
 		authorize => 'http://status.north-winds.org/api/oauth/authorize',
 		access => 'http://status.north-winds.org/api/oauth/access_token',
@@ -226,11 +230,11 @@ if($token eq "" && $cgi->param('oauth_token')) {
 		params => {
 			token => $token,
 			token_secret => $tokenSecret,
-			verifier => $verifier,
 			request_url => $a->{access},
 			request_method => 'GET',
 		},
 	};
+	$oauthData->{params}->{verifier} = $verifier if $a->{version} eq "1.0a";
 
 	my $resp = $ua->request(GET $a->{access}, Authorization => requestSign($oauthData, $cgi, $ua));
 
@@ -394,9 +398,10 @@ my $oauthData = {
 	params => {
 		request_url => $a->{request},
 		request_method => 'GET',
-		callback => 'http://www.north-winds.org/photocatalog/cgi/redirect.pl?redirect_url='.$redirectURL,
 	},
 };
+
+$oauthData->{params}->{callback} = $callbackURL if $a->{version} eq "1.0a";
 
 my $resp;
 if(defined($a->{requestParams})) {
@@ -416,7 +421,7 @@ my $tokenCgi = new CGI($resp->content);
 $token = $tokenCgi->param('oauth_token');
 $tokenSecret = $tokenCgi->param('oauth_token_secret');
 my $callbackConfirmed = $tokenCgi->param('oauth_callback_confirmed');
-if($callbackConfirmed ne "true") {
+if($a->{version} eq "1.0a" && $callbackConfirmed ne "true") {
 	errorResponse("Problem with callback", $resp->content, 500);
 }
 
@@ -446,10 +451,11 @@ if(defined($tokenSecretNode)) {
 
 $doc->toFile($self->{configFile}, 0);
 
-$token =~ s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
+#$token =~ s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
 #print "Location: https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=$token\r\n\r\n";
 #print "Location: https://www.google.com/latitude/apps/OAuthAuthorizeToken?oauth_token=$token&domain=www.north-winds.org&location=all&granularity=best\r\n\r\n";
 #print "Location: https://api.twitter.com/oauth/authorize?oauth_token=$token\r\n\r\n";
-my $sep = '?';
-$sep = '&' if $a->{authorize} =~ /\?/;
-print "Location: $a->{authorize}${sep}oauth_token=$token\r\n\r\n";
+my $params = { oauth_token => $token };
+$params->{oauth_callback} = $callbackURL if $a->{version} ne "1.0a";
+my $authorizeURL = addCgiParam($a->{authorize}, $params);
+print "Location: $authorizeURL\r\n\r\n";

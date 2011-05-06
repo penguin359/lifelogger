@@ -149,6 +149,7 @@ Test with chdir('/var/empty') and drop $cwd
 Check for undefined Subject and Date in email.pl
 Better CGI Handling
   eval over dies such as failed to find source.
+  use bytes on escaping
 and much more...
 
 Windows Issues:
