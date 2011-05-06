@@ -19,8 +19,7 @@ Extend functionality to .THM thumbnail/metadata files and their corresponding vi
 Correctly import .gpx files into database to improve its accuracy (fixing for absent TZdata if needed).
 Correctly import .csv sensor data/other data into database and correlate time to existing location tags.
 Create list of fields in files to import
-Copy rss.pl to twitter.pl, adapt to use improved twitter XML
-Adapt install.pl to have an option for inputting twitter username & converting that to the user_id key
+Update twitter.pl to use native Twitter xML
 Offer option to download entire twitter archive for user to provide ability to historically geotag photos.  See example URL:  http://api.twitter.com/1/statuses/user_timeline.xml?page=$NN&user_id=$UID
 
 
@@ -31,6 +30,19 @@ Turn mobile.pl into a more generic KML filter
   Remove list of XPaths
   Add in XPaths from one file to another
 Improve settings infrastructure
+  Multiple file names
+  findSources with multiple types
+  Support disabled sources
+  Config max time diff for geotagging photos
+  Config time diff for auto-track, segs
+  Config time diff for timediff.pl
+  Config file path for photos
+  Add source for photos
+Twitter.pl
+  Support StatusNet
+  Config by API URL
+  Config by Site with API auto-discovery
+  Username/Password and OAuth
 Better support upgrading
 PostgreSQL
 MySQL
@@ -75,6 +87,12 @@ Eliminate usage of system() and open("|")
 Develop test suite
 Better testing of Unicode/UTF-8
   Test with ASCII, Latin-1, Windows-1252, Chinese, Klingon, Cuniform
+Configuration test-suite
+  Check old-style Perl config
+  Check multiple XML file names
+  Check disabled sources
+  Check duplicate id
+  Check duplicate name
 Properly support :locale instead of forcing utf8
 Expand on TIPS and time zone issues
 Support POST for InstaMapper
@@ -129,6 +147,8 @@ Does Android auto-fill type for content:?
 Check on FileSpec, Basename, and my use of paths.
 Test with chdir('/var/empty') and drop $cwd
 Check for undefined Subject and Date in email.pl
+Better CGI Handling
+  eval over dies such as failed to find source.
 and much more...
 
 Windows Issues:

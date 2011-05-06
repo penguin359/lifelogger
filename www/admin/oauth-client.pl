@@ -44,6 +44,7 @@ use lib qw(
 );
 use FindBin;
 use lib "$FindBin::Bin/../../lib";
+use Common;
 use Net::Flickr;
 use CGI;
 use LWP::UserAgent;
@@ -178,32 +179,29 @@ sub errorResponse {
 }
 
 my $cgi = new CGI;
-if(!$cgi->param() || !$cgi->param('app')) {
-	errorResponse("No app specified");
+if(!$cgi->param() || !$cgi->param('source')) {
+	errorResponse("No source specified");
 }
 
-my $app = $cgi->param('app');
+my $self = init();
+die $self->{usage} if @ARGV > 0;
+lockKml($self);
+
+my $source;
+eval {
+	$source = findSource($self, undef, $cgi->param('source'));
+};
+errorResponse("Failed to locate source", $@) if $@;
+my $app = $source->{type};
 my $appL = lc $app;
 
 my $a = $apps->{$appL};
 
 my $ua = new LWP::UserAgent;
 
-my($token, $tokenSecret) = ("", "");
-
-if(open(my $fd, "$appL-token")) {
-	$token = <$fd>;
-	$token = "" if !defined $token;
-	chomp($token);
-	close $fd;
-}
-
-if(open(my $fd, "$appL-secret")) {
-	$tokenSecret = <$fd>;
-	$tokenSecret = "" if !defined $tokenSecret;
-	chomp($tokenSecret);
-	close $fd;
-}
+my($token, $tokenSecret) = ($source->{token}, $source->{tokenSecret});
+$token = "" if !defined($token);
+$tokenSecret = "" if !defined($tokenSecret);
 
 if($appL eq "facebook" && ($cgi->param('code') || $cgi->param('error'))) {
 	my $code = $cgi->param('code');
@@ -247,13 +245,48 @@ if($token eq "" && $cgi->param('oauth_token')) {
 	$token = $tokenCgi->param('oauth_token');
 	$tokenSecret = $tokenCgi->param('oauth_token_secret');
 
-	open(my $fd, ">$appL-token") or errorResponse("Failed to token");
-	print $fd $token;
-	close $fd;
+	my $xc = loadXPath($self);
+	my $parser = new XML::LibXML;
+	my $doc = $parser->parse_file($self->{configFile});
+	my $sourceNode = getNode($xc, $doc, '/settings/sources/source[id/text() = "'.$source->{id}.'"]');
+	errorResponse("Failed to locate source", "in $self->{configFile}")
+	    if !defined $sourceNode;
+	my $textNode = $doc->createTextNode($token);
 
-	open($fd, ">$appL-secret") or errorResponse("Failed to secret");
-	print $fd $tokenSecret;
-	close $fd;
+	my $tokenNode = getNode($xc, $sourceNode, 'token');
+	if(defined($tokenNode)) {
+		if(defined($tokenNode->firstChild)) {
+			$tokenNode->replaceChild($textNode,
+						 $tokenNode->firstChild);
+		} else {
+			$tokenNode->appendChild($textNode);
+		}
+	} else {
+		$tokenNode = $doc->createElement('token');
+		$tokenNode->appendChild($textNode);
+		$sourceNode->appendTextNode("    ");
+		$sourceNode->appendChild($tokenNode);
+		$sourceNode->appendTextNode("\n\t");
+	}
+
+	$textNode = $doc->createTextNode($tokenSecret);
+	my $tokenSecretNode = getNode($xc, $sourceNode, 'tokenSecret');
+	if(defined($tokenSecretNode)) {
+		if(defined($tokenSecretNode->firstChild)) {
+			$tokenSecretNode->replaceChild($textNode,
+						 $tokenSecretNode->firstChild);
+		} else {
+			$tokenSecretNode->appendChild($textNode);
+		}
+	} else {
+		$tokenSecretNode = $doc->createElement('tokenSecret');
+		$tokenSecretNode->appendChild($textNode);
+		$sourceNode->appendTextNode("    ");
+		$sourceNode->appendChild($tokenSecretNode);
+		$sourceNode->appendTextNode("\n\t");
+	}
+
+	$doc->toFile($self->{configFile}, 0);
 }
 
 if($token ne "") {
@@ -338,7 +371,7 @@ sub addCgiParam {
 	return $baseURL . $query . $fragment;
 }
 
-$redirectURL = addCgiParam($redirectURL, { app => $app, source => 8 });
+$redirectURL = addCgiParam($redirectURL, { app => $app, source => $source->{id} });
 my $callbackURL = addCgiParam('http://www.north-winds.org/photocatalog/cgi/redirect.pl', { redirect_url => $redirectURL });
 
 if($appL eq "facebook") {
@@ -386,9 +419,33 @@ my $callbackConfirmed = $tokenCgi->param('oauth_callback_confirmed');
 if($callbackConfirmed ne "true") {
 	errorResponse("Problem with callback", $resp->content, 500);
 }
-open(my $fd, ">$appL-secret") or errorResponse("Failed to secret", undef, 500);
-print $fd $tokenSecret;
-close $fd;
+
+my $xc = loadXPath($self);
+my $parser = new XML::LibXML;
+my $doc = $parser->parse_file($self->{configFile});
+my $sourceNode = getNode($xc, $doc, '/settings/sources/source[id/text() = "'.$source->{id}.'"]');
+errorResponse("Failed to locate source", "in $self->{configFile}")
+    if !defined $sourceNode;
+
+my $textNode = $doc->createTextNode($tokenSecret);
+my $tokenSecretNode = getNode($xc, $sourceNode, 'tokenSecret');
+if(defined($tokenSecretNode)) {
+	if(defined($tokenSecretNode->firstChild)) {
+		$tokenSecretNode->replaceChild($textNode,
+					 $tokenSecretNode->firstChild);
+	} else {
+		$tokenSecretNode->appendChild($textNode);
+	}
+} else {
+	$tokenSecretNode = $doc->createElement('tokenSecret');
+	$tokenSecretNode->appendChild($textNode);
+	$sourceNode->appendTextNode("    ");
+	$sourceNode->appendChild($tokenSecretNode);
+	$sourceNode->appendTextNode("\n\t");
+}
+
+$doc->toFile($self->{configFile}, 0);
+
 $token =~ s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
 #print "Location: https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=$token\r\n\r\n";
 #print "Location: https://www.google.com/latitude/apps/OAuthAuthorizeToken?oauth_token=$token&domain=www.north-winds.org&location=all&granularity=best\r\n\r\n";

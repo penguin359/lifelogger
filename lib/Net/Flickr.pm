@@ -63,3 +63,5 @@ sub signFlickr {
 	my $sig = $md5->hexdigest;
 	return "$url&api_sig=$sig";
 }
+
+1;

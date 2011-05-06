@@ -36,6 +36,8 @@ use vars qw($apiKey $cwd $dataSource $dbUser $dbPass $settings);
 use Fcntl qw(:flock);
 use POSIX qw(strftime);
 use Getopt::Long;
+use File::Basename;
+use File::Spec;
 use Time::Local;
 use XML::LibXML;
 use Image::ExifTool;
@@ -311,12 +313,14 @@ sub openDB {
 }
 
 sub loadXmlSettings {
-	my($self) = @_;
+	my($self, $base) = @_;
 
+	my $settingsFile = "$base/settings.xml";
 	my $xc = loadXPath($self);
 	my $parser = new XML::LibXML;
-	my $doc = $parser->parse_file("settings.xml");
+	my $doc = $parser->parse_file($settingsFile);
 	my $root = $doc->documentElement();
+	$self->{configFile} = $settingsFile;
 
 	my $settings = $self->{settings};
 	#my $settings = {};
@@ -343,7 +347,7 @@ sub loadXmlSettings {
 }
 
 sub loadSettings {
-	my($self) = @_;
+	my($self, $base) = @_;
 
 	#$settings = $self->{settings};
 
@@ -364,7 +368,7 @@ sub loadSettings {
 
 	eval {
 		print "Trying Perl Configuration... " if $self->{verbose};
-		require 'settings.pl';
+		require "$base/settings.pl";
 
 		# Convert from old-style settings file to new-style.
 		$settings->{apiKey} = $apiKey if defined($apiKey);
@@ -384,11 +388,11 @@ sub loadSettings {
 	};
 	if($@) {
 		print "No.\nTrying XML Configuration... " if $self->{verbose};
-		loadXmlSettings($self);
+		loadXmlSettings($self, $base);
 	}
 	print "Found.\n" if $self->{verbose};
 
-	require "backends/$settings->{backend}.pl";
+	require "$base/backends/$settings->{backend}.pl";
 
 	my $files = {};
 	$files->{lock} = "$settings->{cwd}/lock";
@@ -416,7 +420,11 @@ sub init {
 	$self->{usage} .= " ".$usage if defined $usage;
 	GetOptions(%$globalOptions, %$options) or die $self->{usage};
 
-	loadSettings($self);
+	my $scriptFile = File::Spec->rel2abs(__FILE__);
+	my(undef, $base, undef) = fileparse($scriptFile);
+	$base = dirname($base);
+
+	loadSettings($self, $base);
 
 	$self->{files} = $self->{settings}->{files};
 	my $sources = $self->{settings}->{sources};
@@ -425,6 +433,7 @@ sub init {
 	$self->{sourcesId} = {};
 	$self->{sourcesName} = {};
 	foreach(@$sources) {
+		next if defined($_->{disabled}) && $_->{disabled};
 		next if !defined($_->{type});
 		$_->{type} = lc $_->{type};
 		next if !defined($_->{id});
@@ -439,7 +448,7 @@ sub init {
 			warn "Duplicate source name $_->{name}";
 			next;
 		}
-		$self->{sourcesName}->{$_->{name}} = $_;
+		$self->{sourcesName}->{lc $_->{name}} = $_;
 	}
 
 	chdir $settings->{cwd};
@@ -795,13 +804,15 @@ sub findSource {
 	my $source;
 	if(defined($id)) {
 		$source = $self->{sourcesId}->{$id};
-		$source = $self->{sourcesName}->{$id}
+		$source = $self->{sourcesName}->{lc $id}
 		    if !defined($source);
-		die "Source $id is not configured.\n"
+		die "Source $id is not configured."
 		    if !defined($source);
-		die "Source $id is not type $type.\n"
-		    if $source->{type} ne lc $type;
+		die "Source $id is not type $type."
+		    if defined($type) &&
+		       $source->{type} ne lc $type;
 	} else {
+		die "Source id or type must be defined." if !defined($type);
 		foreach(@{$self->{sources}}) {
 			if($_->{type} eq lc $type) {
 				$source = $_;
