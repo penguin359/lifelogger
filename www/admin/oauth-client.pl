@@ -200,6 +200,18 @@ my $apps = {
 		#handler => \&handleTwitter,
 		handler => \&handleXML,
 	},
+	identica => {
+		version => '1.0a',
+		request => 'https://identi.ca/api/oauth/request_token',
+		authorize => 'https://identi.ca/api/oauth/authorize',
+		authorizeParams => {
+		},
+		access => 'https://identi.ca/api/oauth/access_token',
+		api => 'https://identi.ca/api/statuses/home_timeline.xml',
+		doubleRedirect => 1,
+		handler => \&handleTwitter,
+		#handler => \&handleXML,
+	},
 };
 
 sub requestSign {
@@ -516,6 +528,7 @@ my $oauthData = {
 };
 
 $oauthData->{params}->{callback} = $callbackURL if $a->{version} eq "1.0a";
+$oauthData->{params}->{callback} = "http://www.north-winds.org/photocatalog/cgi/endRedirect.cgi" if $a->{version} eq "1.0a" && $a->{doubleRedirect};
 
 my $resp;
 if(defined($a->{requestParams})) {
@@ -527,7 +540,7 @@ if(defined($a->{requestParams})) {
 }
 
 if(!$resp->is_success) {
-	errorResponse("Failed to get token", $resp->status_line . ", " . $resp->content);
+	errorResponse("Failed to request token", $resp->status_line . ", " . $resp->content);
 }
 #print "Content-Type: text/plain\r\n\r\n";
 #print $resp->status_line, "\n", $resp->content, "\n";
@@ -570,5 +583,6 @@ $doc->toFile($self->{configFile}, 0);
 #print "Location: https://api.twitter.com/oauth/authorize?oauth_token=$token\r\n\r\n";
 my $params = { oauth_token => $token, %{$a->{authorizeParams}} };
 $params->{oauth_callback} = $callbackURL if $a->{version} ne "1.0a";
+$params->{oauth_callback} = "http://www.north-winds.org/photocatalog/cgi/endRedirect.cgi" if $a->{version} ne "1.0a" && $a->{doubleRedirect};
 my $authorizeURL = addCgiParam($a->{authorize}, $params);
 sendRedirect($authorizeURL, $callbackURL);
