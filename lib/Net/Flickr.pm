@@ -49,7 +49,7 @@ sub signFlickr {
 
 	my $md5 = new Digest::MD5;
 	my($base, $query) = split /\?/, $url, 2;
-	my @params = split /&/, $query;
+	my @params = split /&/, $query if defined $query;
 	my %params;
 	foreach(@params) {
 		my ($key, $value) = split /=/, $_, 2;

@@ -86,6 +86,23 @@ sub handleXML {
 	print $resp->status_line . "\n\n", $resp->content;
 }
 
+sub handleFlickr {
+	my($cgi, $resp) = @_;
+
+	my $parser = new XML::LibXML;
+	my $doc = $parser->parse_string($resp->content);
+	my @stat = $doc->findnodes('/rsp/@stat');
+	errorResponse("Failed to parse Flickr API response") if @stat < 1;
+	#print "Stat: '".$stat[0]->nodeValue."'\n";
+	if($stat[0]->nodeValue ne "ok") {
+		my @error = $doc->findnodes('/rsp/err/@msg');
+		my $error = $error[0]->nodeValue if @error >= 1;
+		errorResponse("Error in Flickr API response", $error);
+	}
+	print "Content-Type: text/plain\r\n\r\n";
+	print $doc->toString(0);
+}
+
 sub handleTwitter {
 	my($cgi, $resp) = @_;
 
@@ -109,6 +126,35 @@ sub handleFourSquare {
 }
 
 my $apps = {
+	facebook => {
+		version => '2.0',
+		authorize => 'https://graph.facebook.com/oauth/authorize',
+		authorizeParams => {
+			client_id => '101285466606087',
+			scope => 'user_photos,user_videos,publish_stream,offline_access',
+		},
+		api => '',
+		handler => \&handleXML,
+	},
+	flickr => {
+		version => 'flickr',
+		authorize => 'http://flickr.com/services/auth/',
+		authorizeParams => {
+			api_key => 'c9d5f00dcc25ab2150e776947a9e3e35',
+			perms => 'read',
+		},
+		access => 'http://flickr.com/services/rest/?method=flickr.auth.getToken',
+		accessParams => {
+			api_key => 'c9d5f00dcc25ab2150e776947a9e3e35',
+		},
+		api => 'http://flickr.com/services/rest/?method=flickr.contacts.getList',
+		#api => 'http://flickr.com/services/rest/?method=flickr.people.getInfo',
+		apiParams => {
+			api_key => 'c9d5f00dcc25ab2150e776947a9e3e35',
+		},
+		doubleRedirect => 1,
+		handler => \&handleFlickr,
+	},
 	foursquare => {
 		version => '1.0a',
                 request => 'http://foursquare.com/oauth/request_token',
@@ -146,8 +192,11 @@ my $apps = {
 		version => '1.0',
 		request => 'http://status.north-winds.org/api/oauth/request_token',
 		authorize => 'http://status.north-winds.org/api/oauth/authorize',
+		authorizeParams => {
+		},
 		access => 'http://status.north-winds.org/api/oauth/access_token',
 		api => 'https://status.north-winds.org/api/statuses/home_timeline.xml',
+		doubleRedirect => 1,
 		#handler => \&handleTwitter,
 		handler => \&handleXML,
 	},
@@ -207,16 +256,47 @@ my($token, $tokenSecret) = ($source->{token}, $source->{tokenSecret});
 $token = "" if !defined($token);
 $tokenSecret = "" if !defined($tokenSecret);
 
-if($appL eq "facebook" && ($cgi->param('code') || $cgi->param('error'))) {
-	my $code = $cgi->param('code');
-	my $source = $cgi->param('source');
+my $saveTokens = 0;
+
+if($a->{version} eq "2.0" && ($cgi->param('code') || $cgi->param('error'))) {
+	$token = "dummy";
+	$tokenSecret = $cgi->param('code');
 	my $error = $cgi->param('error');
 	my $errorDescription = $cgi->param('error_description');
-	errorResponse("Facebook Authorization: ", $error . ", " . $errorDescription) if $error;
+	errorResponse("OAuth Authorization: ", $error . ", " . $errorDescription) if $error;
 	#my $error = $cgi->param('error_reason');
-	print "Content-Type: text/plain\r\n\r\n";
-	print "Successfully added Facebook source $source with code $code!\n";
-	exit 0;
+	$saveTokens = 1;
+}
+
+if($a->{version} eq "flickr" && $cgi->param('frob')) {
+	my $url = addCgiParam($a->{access}, { frob => $cgi->param('frob'), %{$a->{accessParams}} });
+	my $resp = $ua->request(GET signFlickr($url));
+	if(!$resp->is_success) {
+		print "Content-Type: text/plain\r\n\r\n";
+		print "Failed to get Flickr token: " . $resp->status_line . ", " . $resp->content;
+		exit 0;
+		#errorResponse("Failed to get token", $resp->status_line . ", " . $resp->content);
+	}
+	#print "Content-Type: text/plain\r\n\r\n";
+	#print $resp->content;
+	my $parser = new XML::LibXML;
+	my $doc = $parser->parse_string($resp->content);
+	my @stat = $doc->findnodes('/rsp/@stat');
+	errorResponse("Failed to parse Flickr API response") if @stat < 1;
+	#print "Stat: '".$stat[0]->nodeValue."'\n";
+	if($stat[0]->nodeValue ne "ok") {
+		my @error = $doc->findnodes('/rsp/err/@msg');
+		my $error = $error[0]->nodeValue if @error >= 1;
+		errorResponse("Error in Flickr API response", $error);
+	}
+	#print $doc->toString(0);
+	my @nodes = $doc->findnodes('/rsp/auth/token/text()');
+	#print Dumper(\@nodes);
+	#print "Node: '", $nodes[0]->nodeValue, "'\n";
+
+	$token = "dummy";
+	$tokenSecret = $nodes[0]->nodeValue;
+	$saveTokens = 1;
 }
 
 # This handles Step 4 in OAuth 1.0a
@@ -249,6 +329,10 @@ if($token eq "" && $cgi->param('oauth_token')) {
 	$token = $tokenCgi->param('oauth_token');
 	$tokenSecret = $tokenCgi->param('oauth_token_secret');
 
+	$saveTokens = 1;
+}
+
+if($saveTokens) {
 	my $xc = loadXPath($self);
 	my $parser = new XML::LibXML;
 	my $doc = $parser->parse_file($self->{configFile});
@@ -294,30 +378,35 @@ if($token eq "" && $cgi->param('oauth_token')) {
 }
 
 if($token ne "") {
-	#print "Content-Type: text/plain\r\n\r\n";
-	#print "Have token.\n";
-	#exit 0;
 	#print $cgi->header, $cgi->start_html(-Title => 'Google Latitude Location', -encoding => 'utf-8');
-	my $oauthData = {
-		protocol => "oauth 1.0a",
-		app => $app,
-		type => "Access",
-		params => {
-			token => $token,
-			token_secret => $tokenSecret,
-			request_url => $a->{api},
-			request_method => 'GET',
-		},
-	};
-
-	my $resp;
-	if(defined($a->{apiParams})) {
-		$oauthData->{params}->{request_method} = 'POST';
-		$oauthData->{params}->{extra_params} = $a->{apiParams};
-		$resp = $ua->request(POST $a->{api}, Authorization => requestSign($oauthData, $cgi, $ua), Content => [ %{$a->{apiParams}} ]);
+	my $req;
+	if($a->{version} eq "2.0") {
+		$req = GET addCgiParam($a->{api}, { access_token => $tokenSecret });
+	} elsif($a->{version} eq "flickr") {
+		my $url = addCgiParam($a->{api}, { auth_token => $tokenSecret, %{$a->{apiParams}} });
+		$req = GET signFlickr($url);
 	} else {
-		$resp = $ua->request(GET $a->{api}, Authorization => requestSign($oauthData, $cgi, $ua));
+		my $oauthData = {
+			protocol => "oauth 1.0a",
+			app => $app,
+			type => "Access",
+			params => {
+				token => $token,
+				token_secret => $tokenSecret,
+				request_url => $a->{api},
+				request_method => 'GET',
+			},
+		};
+
+		if(defined($a->{apiParams})) {
+			$oauthData->{params}->{request_method} = 'POST';
+			$oauthData->{params}->{extra_params} = $a->{apiParams};
+			$req = POST $a->{api}, Authorization => requestSign($oauthData, $cgi, $ua), Content => [ %{$a->{apiParams}} ];
+		} else {
+			$req = GET $a->{api}, Authorization => requestSign($oauthData, $cgi, $ua);
+		}
 	}
+	my $resp = $ua->request($req);
 
 	if(!$resp->is_success) {
 		errorResponse("Failed to get $app", $resp->status_line . ", " . $resp->content);
@@ -329,6 +418,16 @@ if($token ne "") {
 	#print $cgi->end_html;
 
 	exit 0;
+}
+
+#if(defined($cgi->param('query'))) {
+#	print "Content-Type: text/plain\r\n\r\n";
+#	print "Got me a frob: ".$cgi->param('query')."\n";
+#	exit 0;
+#}
+
+if($cgi->param('redirected')) {
+	errorResponse("Failed to acquire token for source $source->{id}");
 }
 
 my $redirectURL = "http";
@@ -375,22 +474,37 @@ sub addCgiParam {
 	return $baseURL . $query . $fragment;
 }
 
-$redirectURL = addCgiParam($redirectURL, { app => $app, source => $source->{id} });
+sub sendRedirect {
+	my($url, $callbackURL) = @_;
+
+	if($a->{doubleRedirect}) {
+		$url = addCgiParam('http://www.north-winds.org/photocatalog/cgi/startRedirect.cgi', { service => $appL, redirect_url => $url, return_to => $callbackURL });
+	}
+	print "Location: $url\r\n\r\n";
+}
+
+$redirectURL = addCgiParam($redirectURL, { app => $app, source => $source->{id}, redirected => 1 });
 my $callbackURL = addCgiParam('http://www.north-winds.org/photocatalog/cgi/redirect.pl', { redirect_url => $redirectURL });
 
-if($appL eq "facebook") {
-	my $url = addCgiParam('https://graph.facebook.com/oauth/authorize?client_id=101285466606087', { redirect_uri => $callbackURL, scope => 'user_photos,user_videos,publish_stream,offline_access' });
-	print "Location: $url\r\n\r\n";
-	exit 0;
-}
-if($appL eq "flickr") {
-	my $url = addCgiParam('http://flickr.com/services/auth/', { api_key => 'c9d5f00dcc25ab2150e776947a9e3e35', perms => 'read' });
-	$url = signFlickr($url);
-	print "Location: $url\r\n\r\n";
+#print "Content-Type: text/plain\r\n\r\n";
+
+# App uses OAuth 2.0
+if($a->{version} eq "2.0") {
+	my $url = addCgiParam($a->{authorize}, { redirect_uri => $callbackURL, %{$a->{authorizeParams}} });
+	sendRedirect($url, $callbackURL);
 	exit 0;
 }
 
-#print "Content-Type: text/plain\r\n\r\n";
+# App uses FlickrAuth
+if($a->{version} eq "flickr") {
+	# FlickrAuth does not support a redirect URL unfortunately
+	my $url = addCgiParam($a->{authorize}, $a->{authorizeParams});
+	$url = signFlickr($url);
+	sendRedirect($url, $callbackURL);
+	exit 0;
+}
+
+# Else assume App uses OAuth 1.0 or 1.0a
 my $oauthData = {
 	protocol => "oauth 1.0a",
 	app => $app,
@@ -451,11 +565,10 @@ if(defined($tokenSecretNode)) {
 
 $doc->toFile($self->{configFile}, 0);
 
-#$token =~ s/([^A-Za-z0-9])/sprintf("%%%02X", ord($1))/seg;
 #print "Location: https://www.google.com/accounts/OAuthAuthorizeToken?oauth_token=$token\r\n\r\n";
 #print "Location: https://www.google.com/latitude/apps/OAuthAuthorizeToken?oauth_token=$token&domain=www.north-winds.org&location=all&granularity=best\r\n\r\n";
 #print "Location: https://api.twitter.com/oauth/authorize?oauth_token=$token\r\n\r\n";
-my $params = { oauth_token => $token };
+my $params = { oauth_token => $token, %{$a->{authorizeParams}} };
 $params->{oauth_callback} = $callbackURL if $a->{version} ne "1.0a";
 my $authorizeURL = addCgiParam($a->{authorize}, $params);
-print "Location: $authorizeURL\r\n\r\n";
+sendRedirect($authorizeURL, $callbackURL);
