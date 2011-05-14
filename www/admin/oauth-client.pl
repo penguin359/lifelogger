@@ -82,7 +82,7 @@ sub handleLatitude {
 sub handleXML {
 	my($cgi, $resp) = @_;
 
-	print "Content-Type: text/plain\r\n\r\n";
+	print "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
 	print $resp->status_line . "\n\n", $resp->content;
 }
 
@@ -99,14 +99,14 @@ sub handleFlickr {
 		my $error = $error[0]->nodeValue if @error >= 1;
 		errorResponse("Error in Flickr API response", $error);
 	}
-	print "Content-Type: text/plain\r\n\r\n";
+	print "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
 	print $doc->toString(0);
 }
 
 sub handleTwitter {
 	my($cgi, $resp) = @_;
 
-	print "Content-Type: text/plain\r\n\r\n";
+	print "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
 	my $doc = XML::LibXML->new->parse_string($resp->content);
 	my @nodes = $doc->findnodes('/statuses/status/text/text()');
 	#print $resp->status_line . "\n\n", $resp->content;
@@ -117,7 +117,7 @@ sub handleTwitter {
 sub handleFourSquare {
 	my($cgi, $resp) = @_;
 
-	print "Content-Type: text/plain\r\n\r\n";
+	print "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
 	my $doc = XML::LibXML->new->parse_string($resp->content);
 	my @nodes = $doc->findnodes('/checkins/checkin/display/text()');
 	#print $resp->status_line . "\n\n", $resp->content;
@@ -159,6 +159,8 @@ my $apps = {
 		version => '1.0a',
                 request => 'http://foursquare.com/oauth/request_token',
                 authorize => 'http://foursquare.com/oauth/authorize',
+		authorizeParams => {
+		},
                 access => 'http://foursquare.com/oauth/access_token',
 		api => 'https://api.foursquare.com/v1/history',
 		#apiParams => {
@@ -170,6 +172,8 @@ my $apps = {
 		version => '1.0a',
 		request => 'https://www.google.com/accounts/OAuthGetRequestToken',
 		authorize => 'https://www.google.com/latitude/apps/OAuthAuthorizeToken?domain=www.north-winds.org&location=all&granularity=best',
+		authorizeParams => {
+		},
 		access => 'https://www.google.com/accounts/OAuthGetAccessToken',
 		#api => 'https://www.googleapis.com/latitude/v1/currentLocation',
 		api => 'https://www.googleapis.com/latitude/v1/location',
@@ -182,6 +186,8 @@ my $apps = {
 		version => '1.0a',
 		request => 'https://api.twitter.com/oauth/request_token',
 		authorize => 'https://api.twitter.com/oauth/authorize',
+		authorizeParams => {
+		},
 		access => 'https://api.twitter.com/oauth/access_token',
 		#api => 'https://api.twitter.com/1/users/search.xml?q=DWAnimation',
 		api => 'https://api.twitter.com/1/statuses/home_timeline.xml',
@@ -235,7 +241,7 @@ sub errorResponse {
 
         $code = 400 if !defined($code);
         print "Status: $code $error\r\n";
-        print "Content-Type: text/plain\r\n\r\n";
+        print "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
         print "ERROR: $error";
         print ": $detail" if defined $detail;
         print "\n";
@@ -249,6 +255,8 @@ if(!$cgi->param() || !$cgi->param('source')) {
 }
 
 my $self = init();
+$self->{debug} = $cgi->param('debug');
+print "Content-Type: text/plain; charset=UTF-8\r\n\r\n" if $self->{debug};
 die $self->{usage} if @ARGV > 0;
 lockKml($self);
 
@@ -267,6 +275,10 @@ my $ua = new LWP::UserAgent;
 my($token, $tokenSecret) = ($source->{token}, $source->{tokenSecret});
 $token = "" if !defined($token);
 $tokenSecret = "" if !defined($tokenSecret);
+if($cgi->param('refresh')) {
+	$token = "";
+	$tokenSecret = "";
+}
 
 my $saveTokens = 0;
 
@@ -284,12 +296,12 @@ if($a->{version} eq "flickr" && $cgi->param('frob')) {
 	my $url = addCgiParam($a->{access}, { frob => $cgi->param('frob'), %{$a->{accessParams}} });
 	my $resp = $ua->request(GET signFlickr($url));
 	if(!$resp->is_success) {
-		print "Content-Type: text/plain\r\n\r\n";
+		print "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
 		print "Failed to get Flickr token: " . $resp->status_line . ", " . $resp->content;
 		exit 0;
 		#errorResponse("Failed to get token", $resp->status_line . ", " . $resp->content);
 	}
-	#print "Content-Type: text/plain\r\n\r\n";
+	#print "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
 	#print $resp->content;
 	my $parser = new XML::LibXML;
 	my $doc = $parser->parse_string($resp->content);
@@ -312,7 +324,8 @@ if($a->{version} eq "flickr" && $cgi->param('frob')) {
 }
 
 # This handles Step 4 in OAuth 1.0a
-if($token eq "" && $cgi->param('oauth_token')) {
+#if($token eq "" && $cgi->param('oauth_token')) {
+if($cgi->param('redirected') && $cgi->param('oauth_token')) {
 	$token = $cgi->param('oauth_token');
 	my $verifier = $cgi->param('oauth_verifier');
 	my $oauthData = {
@@ -331,7 +344,7 @@ if($token eq "" && $cgi->param('oauth_token')) {
 	my $resp = $ua->request(GET $a->{access}, Authorization => requestSign($oauthData, $cgi, $ua));
 
 	if(!$resp->is_success) {
-		print "Content-Type: text/plain\r\n\r\n";
+		print "Content-Type: text/plain; charset=UTF-8\r\n\r\n";
 		print "Failed to get token: " . $resp->status_line . ", " . $resp->content;
 		exit 0;
 		errorResponse("Failed to get token", $resp->status_line . ", " . $resp->content);
@@ -387,6 +400,13 @@ if($saveTokens) {
 	}
 
 	$doc->toFile($self->{configFile}, 0);
+
+	my $redirectURL = "http";
+	$redirectURL .= "s" if defined $ENV{HTTPS} && lc $ENV{HTTPS} eq "on";
+	$redirectURL .= "://$ENV{SERVER_NAME}$ENV{SCRIPT_NAME}";
+	$redirectURL = addCgiParam($redirectURL, { app => $app, source => $source->{id}, redirected => 1, debug => $self->{debug} });
+	print "Location: $redirectURL\r\n\r\n";
+	exit 0;
 }
 
 if($token ne "") {
@@ -479,6 +499,7 @@ sub addCgiParam {
 	$sep = "&" if $baseURL =~ /\?/;
 	my $query = "";
 	foreach(keys %$params) {
+		next if !defined $params->{$_};
 		$query .= $sep . escapeCgiParam($_) . "=" . escapeCgiParam($params->{$_});
 		$sep = "&";
 	}
@@ -490,13 +511,13 @@ sub sendRedirect {
 	my($url, $callbackURL) = @_;
 
 	if($a->{doubleRedirect}) {
-		$url = addCgiParam('http://www.north-winds.org/photocatalog/cgi/startRedirect.cgi', { service => $appL, redirect_url => $url, return_to => $callbackURL });
+		$url = addCgiParam('http://www.north-winds.org/photocatalog/cgi/startRedirect.cgi', { service => $appL, redirect_url => $url, return_to => $callbackURL, debug => $self->{debug} });
 	}
 	print "Location: $url\r\n\r\n";
 }
 
-$redirectURL = addCgiParam($redirectURL, { app => $app, source => $source->{id}, redirected => 1 });
-my $callbackURL = addCgiParam('http://www.north-winds.org/photocatalog/cgi/redirect.pl', { redirect_url => $redirectURL });
+$redirectURL = addCgiParam($redirectURL, { app => $app, source => $source->{id}, redirected => 1, debug => $self->{debug} });
+my $callbackURL = addCgiParam('http://www.north-winds.org/photocatalog/cgi/redirect.pl', { redirect_url => $redirectURL, debug => $self->{debug} });
 
 #print "Content-Type: text/plain\r\n\r\n";
 
