@@ -325,8 +325,8 @@ sub loadXmlSettings {
 	my $settings = $self->{settings};
 	#my $settings = {};
 	foreach("cwd", "backend", "dataSource", "dbUser", "dbPass", "website") {
-		$settings->{$_} = getTextNode($xc, $root, $_);
-		delete $settings->{$_} if !defined($settings->{$_});
+		my $val = getTextNode($xc, $root, $_);
+		$settings->{$_} = $val if defined $val;
 	}
 	
 	my $sources = [];
@@ -334,12 +334,24 @@ sub loadXmlSettings {
 	foreach my $node (@sourceNodes) {
 		my $source = {};
 		foreach("id", "type", "name", "deviceKey", "apiKey", "token", "tokenSecret", "file", "url") {
-			$source->{$_} = getTextNode($xc, $node, $_);
-			delete $source->{$_} if !defined($source->{$_});
+			my $val = getTextNode($xc, $node, $_);
+			$source->{$_} = $val if defined $val;
 		}
 		foreach("position", "line", "location", "container") {
-			$source->{kml}->{$_} = getTextNode($xc, $node, "kml/".$_);
-			delete $source->{kml}->{$_} if !defined($source->{kml}->{$_});
+			my $val = getTextNode($xc, $node, "kml/".$_);
+			$source->{kml}->{$_} = $val if defined $val;
+		}
+		foreach($xc->findnodes('param', $node)) {
+			my $name = $_->getAttribute('name');
+			if(!defined $name) {
+				warn "Parameter name not specified for source $source->{id}";
+				next;
+			}
+			if(!defined $_->firstChild || !defined $_->firstChild->nodeValue) {
+				warn "Parameter value for $name not specified for source $source->{id}";
+				next;
+			}
+			$source->{param}->{$name} = $_->firstChild->nodeValue;
 		}
 		push @$sources, $source;
 	}
@@ -362,13 +374,22 @@ sub loadSettings {
 		$settings->{dbPass} = "S3cr3t!";
 		$settings->{website} = "http://www.example.org/";
 		#$settings->{rssFeed} = "http://twitter.com/statuses/user_timeline/783214.rss";
+
+		$settings->{defaults} = {
+			global => {
+			},
+			source => {
+				twitter => {
+				},
+			},
+		};
 	}
 
 	$self->{settings} = $settings;
 
 	eval {
 		print "Trying Perl Configuration... " if $self->{verbose};
-		require "$base/settings.pl";
+		do "$base/settings.pl" or die "Failed to load settings.pl";
 
 		# Convert from old-style settings file to new-style.
 		$settings->{apiKey} = $apiKey if defined($apiKey);
@@ -388,7 +409,13 @@ sub loadSettings {
 	};
 	if($@) {
 		print "No.\nTrying XML Configuration... " if $self->{verbose};
-		loadXmlSettings($self, $base);
+		eval {
+			loadXmlSettings($self, $base);
+		};
+		if($@) {
+			print "No.\n" if $self->{verbose};
+			die "Failed to find configuration file";
+		}
 	}
 	print "Found.\n" if $self->{verbose};
 
@@ -796,6 +823,20 @@ sub addImage {
 	];
 	writeDataPC($self, [], 'images.csv', $fieldsImage, 1) if ! -f 'images.csv';
 	appendDataPC($self, [{ filename => $filename, title => $title, description => $description }], 'images.csv', 1, $fieldsImage);
+}
+
+sub param {
+	my($self, $source, $param) = @_;
+
+	my $defaults = $self->{settings}->{defaults};
+	if(defined $source->{params}->{$param}) {
+		return $source->{params}->{$param};
+	} elsif(defined $defaults->{sources}->{$source->{type}}->{$param}) {
+		return $defaults->{sources}->{$source->{type}}->{$param};
+	} elsif(defined $defaults->{global}->{$param}) {
+		return $defaults->{global}->{$param};
+	}
+	return;
 }
 
 sub findSource {
