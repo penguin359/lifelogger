@@ -138,7 +138,7 @@ $containerPath = "//kml:Folder[\@id='$containerId']" if defined($containerId);
 my @base = $xc->findnodes($containerPath, $doc);
 #my $parser = new XML::LibXML;
 #my $twitterDoc = $parser->parse_file($twitterFile);
-my $twitterDoc = loadXML($twitterFile);
+my $twitterDoc = loadXML($twitterFile, $source);
 my @items = $xc->findnodes('/rss/channel/item', $twitterDoc);
 
 die "Can't find container for Twitter" if @base != 1;

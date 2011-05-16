@@ -46,7 +46,7 @@ use Net::OAuth::Local;
 my $usage = "[-id id] [foursquare.xml]";
 my $id;
 
-my $self = init($usage, {"id=i" => \$id});
+my $self = init($usage, {"id=s" => \$id});
 die $self->{usage} if @ARGV > 1;
 lockKml($self);
 
@@ -59,7 +59,7 @@ if(defined($fourSquareFile)) {
 		id => 11,
 		name => "FourSquare",
 		deviceKey => 11,
-		file => $fourSquareFile
+		file => $fourSquareFile,
 	};
 } else {
 	$source = findSource($self, "FourSquare", $id);
@@ -71,7 +71,7 @@ if(defined($fourSquareFile)) {
 # This is a wrapper for LibXML allowing it to pull from URLs as well as
 # from files.  This was shamelessly stolen from XML::DOM.
 sub loadXML {
-	my($url) = @_;
+	my($url, $source) = @_;
 	my $parser = new XML::LibXML;
 
 	# Any other URL schemes?
@@ -87,21 +87,25 @@ sub loadXML {
 			use LWP::UserAgent;
 
 			my $ua = LWP::UserAgent->new;
-
-			my $oauthData = {
-				protocol => 'oauth 1.0a',
-				app => 'FourSquare',
-				type => 'Resource',
-				params => {
-					token => $source->{token},
-					token_secret => $source->{tokenSecret},
-					request_url => $url,
-					request_method => 'GET',
-				},
-			};
-
 			my $headers = new HTTP::Headers;
-			$headers->header('Authorization', requestSign($oauthData)->{authorization});
+
+			if(defined($source->{token}) &&
+			   defined($source->{tokenSecret})) {
+				my $oauthData = {
+					protocol => 'oauth 1.0a',
+					app => 'Twitter',
+					type => 'Resource',
+					params => {
+						token => $source->{token},
+						token_secret => $source->{tokenSecret},
+						request_url => $url,
+						request_method => 'GET',
+					},
+				};
+
+				$headers->header('Authorization', requestSign($oauthData)->{authorization});
+			}
+
 			# Load proxy settings from environment variables, i.e.:
 			# http_proxy, ftp_proxy, no_proxy etc. (see LWP::UserAgent(3))
 			# You need these to go thru firewalls.
@@ -131,7 +135,7 @@ $containerPath = "//kml:Folder[\@id='$containerId']" if defined($containerId);
 my @base = $xc->findnodes($containerPath, $doc);
 #my $parser = new XML::LibXML;
 #my $fourSquareDoc = $parser->parse_file($fourSquareFile);
-my $fourSquareDoc = loadXML($fourSquareFile);
+my $fourSquareDoc = loadXML($fourSquareFile, $source);
 my @items = $xc->findnodes('/checkins/checkin', $fourSquareDoc);
 
 die "Can't find container for FourSquare" if @base != 1;
