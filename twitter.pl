@@ -58,6 +58,7 @@ if(defined($twitterFile)) {
 	$source = {
 		id => 12,
 		name => "Twitter",
+		type => "Twitter",
 		deviceKey => 12,
 		file => $twitterFile,
 	};

@@ -38,10 +38,24 @@ use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use Common;
 
-my $usage = "[image.jpg ...]";
+my $usage = "[-id id] [image.jpg ...]";
+my $id;
 
-my $self = init();
+my $self = init($usage, {"id=s" => \$id});
 lockKml($self);
+
+my $source;
+eval {
+	$source = findSource($self, "Photos", $id);
+};
+if($@) {
+	$source = {
+		id => 13,
+		name => "Photos",
+		type => "Photos",
+		deviceKey => 13,
+	};
+}
 
 sub addImageScan {
 	my($path, $self, $doc, $base) = @_;
@@ -64,27 +78,30 @@ sub addImageScan {
 	my $title = $filename;
 	$title =~ s/\.jpg$//;
 	eval {
-		$filename = processImage($self, $path, $title);
+		$filename = processImage($self, $source, $path, $title);
 		die "Could not process image '$path'" if !defined($filename);
-		addImage($filename, $self, $doc, $base, $title);
-		createThumbnails($self, $filename);
+		addImage($self, $source, $filename, $doc, $base, $title);
+		createThumbnails($self, $source, $filename);
 	};
 }
 
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my @base = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Unsorted Photos']", $doc);
+my $photoPath = "/kml:kml/kml:Document/kml:Folder[kml:name='Unsorted Photos']";
+my $photoId = $source->{kml}->{photo};
+$photoPath = "//kml:Folder[\@id='$photoId']" if defined($photoId);
+my @photoBase = $xc->findnodes($photoPath, $doc);
 
-die "Can't find base for unsorted photos" if @base != 1;
+die "Can't find container for unsorted photos" if @photoBase != 1;
 
 
 $self->{rssFeed} = loadRssFeed($self);
 $self->{atomFeed} = loadAtomFeed($self);
 if(!@ARGV) {
-	addImageScan($_, $self, $doc, $base[0])
-	    foreach glob "$self->{settings}->{cwd}/uploads/*.[jJ][pP][gG] uploads/*.[jJ][pP][eE][gG]";
+	addImageScan($_, $self, $doc, $photoBase[0])
+	    foreach glob "$self->{settings}->{cwd}/uploads/*.[jJ][pP][gG] $self->{settings}->{cwd}/uploads/*.[jJ][pP][eE][gG]";
 } else {
-	addImageScan($_, $self, $doc, $base[0])
+	addImageScan($_, $self, $doc, $photoBase[0])
 	    foreach @ARGV;
 }
 saveKml($self, $doc);

@@ -53,6 +53,7 @@ if(defined($rssFile)) {
 	$source = {
 		id => 10,
 		name => "RSS",
+		type => "RSS",
 		deviceKey => 10,
 		file => $rssFile
 	};

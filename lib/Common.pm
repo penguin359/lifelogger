@@ -576,7 +576,7 @@ sub createThumbnailsIM {
 }
 
 sub createThumbnails {
-	my($self, $file) = @_;
+	my($self, $source, $file) = @_;
 
 	#$file =~ m:^(.*/)?([^/]+)$:;
 	#my($path, $name) = ($1, $2);
@@ -597,7 +597,7 @@ sub createThumbnails {
 sub processImage {
 	my $filename2;
 	eval {
-	my($self, $file, $name) = @_;
+	my($self, $source, $file, $name) = @_;
 
 	$name = "Image" if !defined($name);
 	print "Processing image $file.\n" if $self->{verbose};
@@ -766,7 +766,7 @@ sub processImage {
 }
 
 sub addImage {
-	my($filename, $self, $doc, $base, $title, $description) = @_;
+	my($self, $source, $filename, $doc, $base, $title, $description) = @_;
 
 	my $path = "$self->{settings}->{cwd}/images/$filename";
 	my $exif = new Image::ExifTool;

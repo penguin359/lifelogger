@@ -58,6 +58,7 @@ if(defined($fourSquareFile)) {
 	$source = {
 		id => 11,
 		name => "FourSquare",
+		type => "FourSquare",
 		deviceKey => 11,
 		file => $fourSquareFile,
 	};

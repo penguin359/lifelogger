@@ -41,11 +41,25 @@ use MIME::Parser;
 use MIME::WordDecoder;
 use Encode;
 
-my $usage = "[message.eml]";
+my $usage = "[-id id] [message.eml]";
+my $id;
 
-my $self = init($usage);
+my $self = init($usage, {"id=s" => \$id});
 die $self->{usage} if @ARGV > 1;
 lockKml($self);
+
+my $source;
+eval {
+	$source = findSource($self, "Photos", $id);
+};
+if($@) {
+	$source = {
+		id => 13,
+		name => "Photos",
+		type => "Photos",
+		deviceKey => 13,
+	};
+}
 
 my $descrText = "";
 
@@ -79,10 +93,10 @@ sub scanEntity {
 		}
 		close $outFd;
 		eval {
-			my $newFilename = processImage($self, "tmp/$filename", $self->{subject});
+			my $newFilename = processImage($self, $source, "tmp/$filename", $self->{subject});
 			die "Could not process image 'tmp/$filename'" if !defined($newFilename);
-			addImage($newFilename, $self, $doc, $base, $self->{subject}, $descrText);
-			createThumbnails($self, $newFilename);
+			addImage($self, $source, $newFilename, $doc, $base, $self->{subject}, $descrText);
+			createThumbnails($self, $source, $newFilename);
 		};
 	} elsif($entity->head->mime_type eq "text/plain") {
 		print "Found text\n" if $self->{verbose};
@@ -119,11 +133,17 @@ sub myFromRaw {
 
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my @messageBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Messages']", $doc);
-my @photoBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Photos']", $doc);
+my $messagePath = "/kml:kml/kml:Document/kml:Folder[kml:name='Messages']";
+my $messageId = $source->{kml}->{message};
+$messagePath = "//kml:Folder[\@id='$messageId']" if defined($messageId);
+my @messageBase = $xc->findnodes($messagePath, $doc);
+my $photoPath = "/kml:kml/kml:Document/kml:Folder[kml:name='Photos']";
+my $photoId = $source->{kml}->{photo};
+$photoPath = "//kml:Folder[\@id='$photoId']" if defined($photoId);
+my @photoBase = $xc->findnodes($photoPath, $doc);
 
-die "Can't find base for photos" if @photoBase != 1;
-die "Can't find base for messages" if @messageBase != 1;
+die "Can't find container for messages" if @messageBase != 1;
+die "Can't find container for photos" if @photoBase != 1;
 
 my $messageBase = $messageBase[0];
 my $photoBase = $photoBase[0];

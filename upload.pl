@@ -100,20 +100,41 @@ if(defined(param('type')) && param('type') eq "gps") {
 	exit 0;
 }
 
+my $id;
 $verbose = 1 if !$text;
 
 my $self = init();
 $self->{verbose} = $verbose;
 lockKml($self);
 
+my $source;
+eval {
+	$source = findSource($self, "Photos", $id);
+};
+if($@) {
+	$source = {
+		id => 13,
+		name => "Photos",
+		type => "Photos",
+		deviceKey => 13,
+	};
+}
+
 my $doc = loadKml($self);
 my $xc = loadXPath($self);
-my @messageBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Messages']", $doc);
-my @photoBase = $xc->findnodes("/kml:kml/kml:Document/kml:Folder[kml:name='Photos']", $doc);
+my $messagePath = "/kml:kml/kml:Document/kml:Folder[kml:name='Messages']";
+my $messageId = $source->{kml}->{message};
+$messagePath = "//kml:Folder[\@id='$messageId']" if defined($messageId);
+my @messageBase = $xc->findnodes($messagePath, $doc);
+my $photoPath = "/kml:kml/kml:Document/kml:Folder[kml:name='Photos']";
+my $photoId = $source->{kml}->{photo};
+$photoPath = "//kml:Folder[\@id='$photoId']" if defined($photoId);
+my @photoBase = $xc->findnodes($photoPath, $doc);
 
-print "Checking for base...\n" if !$text;
-die "Can't find base for photos" if @photoBase != 1;
-die "Can't find base for messages" if @messageBase != 1;
+
+print "Checking for containers...\n" if !$text;
+die "Can't find container for messages" if @messageBase != 1;
+die "Can't find container for photos" if @photoBase != 1;
 print "Found.\n" if !$text;
 
 $self->{rssFeed} = loadRssFeed($self);
@@ -164,10 +185,10 @@ if(defined(upload('file'))) {
 		print "File: '" . $filename . "'\n" if !$text;
 		eval {
 			my $oldFilename = $filename;
-			$filename = processImage($self, "tmp/$filename", $title);
+			$filename = processImage($self, $source, "tmp/$filename", $title);
 			die "Could not process image 'tmp/$oldFilename'" if !defined($filename);
-			addImage($filename, $self, $doc, $photoBase, $title, $descr);
-			createThumbnails($self, $filename);
+			addImage($self, $source, $filename, $doc, $photoBase, $title, $descr);
+			createThumbnails($self, $source, $filename);
 		};
 		if($@) {
 			print "ERROR\n" if $text;
