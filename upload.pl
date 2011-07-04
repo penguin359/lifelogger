@@ -200,7 +200,7 @@ if(defined(upload('file'))) {
 } else {
 	my $html = "<p><b>$title</b></p><p>$descr</p>";
 	my $mark = createPlacemark($doc);
-	#my $entry = closestEntry($self, $self->{date});
+	#my $entry = closestEntry($self, $source, $self->{date});
 	my $entry = {};
 	addName($doc, $mark, $title);
 	addDescription($doc, $mark, $html);

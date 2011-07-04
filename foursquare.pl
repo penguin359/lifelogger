@@ -223,7 +223,7 @@ foreach my $item (reverse @items) {
 		$entry->{timestamp} = $timestamp;
 		push @$newEntries, $entry;
 	} else {
-		$entry = closestEntry($self, $timestamp);
+		$entry = closestEntry($self, $source, $timestamp);
 	}
 	addName($doc, $mark, $name);
 	my $escapedName = escapeText($self, $name);

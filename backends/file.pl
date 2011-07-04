@@ -497,7 +497,7 @@ sub readData {
 }
 
 sub closestEntry {
-	my($self, $timestamp) = @_;
+	my($self, $source, $timestamp) = @_;
 
 	my $entries = readData($self);
 	return undef if @$entries == 0;
@@ -508,6 +508,12 @@ sub closestEntry {
 			$matchEntry = $entry;
 			$offset = abs($entry->{timestamp} - $timestamp);
 		}
+	}
+	my $maxdiff = param($self, $source, 'maxdiff');
+	if($maxdiff >= 0 && $offset > $maxdiff) {
+		die sprintf("Image timestamp (".strftime("%FT%TZ", gmtime($timestamp)).") ".
+			    "not close to any GPS entry (" .strftime("%FT%TZ", gmtime($entry->{timestamp})).
+			    "). Closest offset is %.2f minutes.", $offset/60);
 	}
 
 	return $matchEntry;

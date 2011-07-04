@@ -166,7 +166,7 @@ sub parseDate {
 }
 
 sub parseExifDate {
-	my($date) = @_;
+	my($self, $source, $date) = @_;
 
 	$date =~ /(\d+):(\d+):(\d+)\s+(\d+):(\d+):(\d+)/;
 	my $year = $1;
@@ -175,9 +175,12 @@ sub parseExifDate {
 	my $hour = $4;
 	my $min = $5;
 	my $sec = $6;
-	#my $tzoffset = (-7*60 + 0)*60;
-	#return timegm($sec, $min, $hour, $mday, $mon-1, $year) - $tzoffset;
-	return timelocal($sec, $min, $hour, $mday, $mon-1, $year);
+	my $tzoffset = param($self, $source, 'tzoffset');
+	if(defined $tzoffset && $tzoffset ne "") {
+		return timegm($sec, $min, $hour, $mday, $mon-1, $year) - $tzoffset;
+	} else {
+		return timelocal($sec, $min, $hour, $mday, $mon-1, $year);
+	}
 }
 
 sub escapeText {
@@ -377,6 +380,8 @@ sub loadSettings {
 
 		$settings->{defaults} = {
 			global => {
+				maxdiff => 600,
+				tzoffset => "",
 			},
 			source => {
 				twitter => {
@@ -429,7 +434,7 @@ sub loadSettings {
 
 	$settings->{files} = $files;
 
-	#print Dumper($settings);
+	print Dumper($settings);
 }
 
 sub init {
@@ -620,7 +625,7 @@ sub processImage {
 
 	my $timestamp = $exif->GetValue('DateTimeOriginal');
 	die "No date to use for naming file." if !defined($timestamp);
-	$timestamp = parseExifDate($timestamp);
+	$timestamp = parseExifDate($self, $source, $timestamp);
 
 	eval {
 	if((!defined($exif->GetValue('GPSVersionID')) &&
@@ -630,17 +635,14 @@ sub processImage {
 		print "Geotagging photo.\n" if $self->{verbose};
 		#my $timestamp = $exif->GetValue('DateTimeOriginal');
 		#die "No date to use." if !defined($timestamp);
-		#$timestamp = parseExifDate($timestamp);
+		#$timestamp = parseExifDate($self, $source, $timestamp);
 
 		if($timestamp <= 981119752) {
 			die "Image timestamp is out of bounds!"
 		}
-		my $entry = closestEntry($self, $timestamp);
+		my $entry = closestEntry($self, $source, $timestamp);
 		die "No entries." if !defined($entry);
 		#print Dumper($entry);
-		if(abs($entry->{timestamp} - $timestamp) > 600) {
-			die "Image timestamp ($timestamp) not close to any GPS entry ($entry->{timestamp}) offset is:  " . abs(($timestamp - $entry->{timestamp})/60) . " minutes.";
-		}
 
 		my $longitude = $entry->{longitude};
 		my $longitudeRef = "E";
@@ -779,7 +781,7 @@ sub addImage {
 
 	my $timestamp;
 	if(exists $info->{DateTimeOriginal}) {
-		$timestamp = parseExifDate($info->{DateTimeOriginal});
+		$timestamp = parseExifDate($self, $source, $info->{DateTimeOriginal});
 	}
 	my $latitude;
 	my $longitude;
@@ -829,9 +831,10 @@ sub param {
 	my($self, $source, $param) = @_;
 
 	my $defaults = $self->{settings}->{defaults};
-	if(defined $source->{params}->{$param}) {
+	if(defined $source && defined $source->{params}->{$param}) {
 		return $source->{params}->{$param};
-	} elsif(defined $defaults->{sources}->{$source->{type}}->{$param}) {
+	} elsif(defined $source &&
+		defined $defaults->{sources}->{$source->{type}}->{$param}) {
 		return $defaults->{sources}->{$source->{type}}->{$param};
 	} elsif(defined $defaults->{global}->{$param}) {
 		return $defaults->{global}->{$param};

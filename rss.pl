@@ -112,7 +112,7 @@ foreach my $item (reverse @items) {
 		$entry->{timestamp} = $timestamp;
 		push @$newEntries, $entry;
 	} else {
-		$entry = closestEntry($self, $timestamp);
+		$entry = closestEntry($self, $source, $timestamp);
 	}
 	addName($doc, $mark, $title);
 	addDescription($doc, $mark, "<p>$escapedDescr</p><a href=\"$escapedLink\">Link</a>");
