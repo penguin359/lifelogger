@@ -93,9 +93,9 @@ sub scanEntity {
 		}
 		close $outFd;
 		eval {
-			my $newFilename = processImage($self, $source, "tmp/$filename", $self->{subject});
+			my $newFilename = processImage($self, $source, "tmp/$filename", $self->{subject}, $descrText);
 			die "Could not process image 'tmp/$filename'" if !defined($newFilename);
-			addImage($self, $source, $newFilename, $doc, $base, $self->{subject}, $descrText);
+			addImage($self, $source, $newFilename, $doc, $base);
 			createThumbnails($self, $source, $newFilename);
 		};
 	} elsif($entity->head->mime_type eq "text/plain") {
@@ -106,7 +106,9 @@ sub scanEntity {
 		my $wd = MIME::WordDecoder->new(['utf-8' => 'KEEP', '*' => \&myToUtf8, 'raw' => \&myFromRaw]);
 		$self->{subject} = $wd->decode($self->{subject});
 		$descrText = decode($entity->head->mime_attr('Content-type.charset'), $descrText);
-		$descrText = escapeText($self, $descrText);
+		$descrText =~ s/\r?\n-- \r?\n.*//s;  # Drop standard E-mail signature
+		$descrText =~ s/^[[:space:]]+//s;
+		$descrText =~ s/[[:space:]]+$//s;
 	} elsif($entity->head->get('Content-Disposition', 0) =~ /^\s*attachment\s*(?:;.*)?$/) {
 		print "Found other attachment\n" if $self->{verbose};
 		$entity->bodyhandle->binmode(1);
@@ -179,7 +181,7 @@ $self->{matched} = 0;
 scanEntity($entity, $self, $doc, $photoBase);
 if(!$self->{matched}) {
 	my $title = $self->{subject};
-	my $descr = $descrText;
+	my $descr = escapeText($self, $descrText);
 	my $html = "<p><b>$title</b></p><p>$descr</p>";
 	my $mark = createPlacemark($doc);
 	my $entry = closestEntry($self, $source, $self->{date});

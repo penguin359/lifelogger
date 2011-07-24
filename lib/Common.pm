@@ -435,6 +435,7 @@ sub loadSettings {
 	$files->{kml} = "$settings->{cwd}/live.kml";
 	$files->{rss} = "$settings->{cwd}/live.rss";
 	$files->{atom} = "$settings->{cwd}/live.atom";
+	$files->{images} = "$settings->{cwd}/images.csv";
 
 	$settings->{defaults}->{source}->{basePath} = "$settings->{cwd}/images";
 
@@ -448,11 +449,28 @@ sub init {
 
 	my $self = {};
 
-	my $globalUsage = "Usage: $0 [-config name] [-debug] [-verbose]";
+	my $newOptions = [];
+	my $endOptions = 0;
+	foreach my $option (@ARGV) {
+		if(!$endOptions &&
+		   $option =~ /^([[:alpha:]][[:alnum:]]*)=(.*)$/) {
+			$self->{cmdParams}->{$1} = $2;
+			next;
+		}
+		$endOptions = 1 if $option eq "--";
+		push @$newOptions, $option;
+	}
+	#print Dumper(\@ARGV);
+	@ARGV = @$newOptions;
+	#print Dumper(\@ARGV);
+	#print Dumper($self);
+
+	my $globalUsage = "Usage: $0 [-config name] [-debug] [-verbose] [-dry-run]";
 	my $globalOptions = {
 		"config=s" => \$self->{config},
 		"debug" => \$self->{debug},
 		"verbose" => \$self->{verbose},
+		"dry-run" => \$self->{dryRun},
 	};
 	$self->{usage} = $globalUsage;
 	$self->{usage} .= " ".$usage if defined $usage;
@@ -608,9 +626,9 @@ sub createThumbnails {
 sub processImage {
 	my $filename2;
 	eval {
-	my($self, $source, $file, $name) = @_;
+	my($self, $source, $file, $title, $description) = @_;
 
-	$name = "Image" if !defined($name);
+	$title = "Image" if !defined($title);
 	print "Processing image $file.\n" if $self->{verbose};
 	my $fileSize = -s $file;
 	#my $utcTime = 0;
@@ -672,6 +690,7 @@ sub processImage {
 		}
 
 		my $altitude = $entry->{altitude};
+		$altitude = 0 if !defined $altitude;
 		my $altitudeRef = 0;
 		if ($altitude < 0) {
 			$altitude *= -1;
@@ -711,10 +730,10 @@ sub processImage {
 		$rotate = "";
 	}
 	my $outFile = strftime("%m%B/%d%a, %b %e/%H%M%S", localtime($timestamp));
-	my $filename = "$self->{settings}->{cwd}/images/$outFile$name.jpg";
+	my $filename = "$self->{settings}->{cwd}/images/$outFile$title.jpg";
 	my $path = $filename;
 	$path =~ s/[^\/]*$//;
-	mkdirPath($path);
+	mkdirPath($path) if !$self->{dryRun};
 	#my($fh, $tempFile) = tempfile;
 	#close $fh;
 	my $tempFile = $filename;
@@ -724,64 +743,88 @@ sub processImage {
 	if($self->{verbose}) {
 		print join(' ', @jpegtran), "\n";
 	}
-	my $status = system(@jpegtran);
-	if(($^O eq "MSWin32" && $status != 0) || $status < 0) {
-		# Jpegtran is not installed so just copy
-		# image without rotating
-		warn "jpegtran not installed so can't rotate image\n";
-		open(my $inFd, '<:bytes', $file);
-		binmode $inFd;
-		open(my $outFd, '>:bytes', $tempFile);
-		binmode $outFd;
-		while(<$inFd>) {
-			print $outFd $_;
+	if(!$self->{dryRun}) {
+		my $status = system(@jpegtran);
+		if(($^O eq "MSWin32" && $status != 0) || $status < 0) {
+			# Jpegtran is not installed so just copy
+			# image without rotating
+			warn "jpegtran not installed so can't rotate image\n";
+			open(my $inFd, '<:bytes', $file);
+			binmode $inFd;
+			open(my $outFd, '>:bytes', $tempFile);
+			binmode $outFd;
+			while(<$inFd>) {
+				print $outFd $_;
+			}
+			close $outFd;
+			close $inFd;
+		} elsif($status != 0) {
+			die "Failed to process image '$file'";
+		} else {
+			$exif->SetNewValue('Orientation', 1)
+			    if($rotate ne "");
 		}
-		close $outFd;
-		close $inFd;
-	} elsif($status != 0) {
-		die "Failed to process image '$file'";
-	} else {
-		$exif->SetNewValue('Orientation', 1)
-		    if($rotate ne "");
+	}
+
+	sub setNewValueIfNotExists {
+		my($exif, $name, $value) = @_;
+
+		$exif->SetNewValue($name, $value) if !defined $exif->GetValue($name);
 	}
 
 	#Set GeoTagged EXIF data:
 	my $originalName = $file;
 	$originalName =~ s:.*[/\\]::;
-	$exif->SetNewValue('UserComment', 'Original Filename: '.$originalName.', Original Filesize: '.$fileSize.'.');
-	$exif->SetNewValue('Copyright', 'Copyright © 2010 John Doe, All Rights Reserved');
+	setNewValueIfNotExists($exif, 'UserComment', 'Original Filename: '.$originalName.', Original Filesize: '.$fileSize.'.');
+	setNewValueIfNotExists($exif, 'Copyright', 'Copyright © 2010 John Doe, All Rights Reserved');
+	setNewValueIfNotExists($exif, 'Title', $title);
+	setNewValueIfNotExists($exif, 'Description', $description) if defined($description);
 
 	#print Dumper($exif->GetInfo);
 	#my $info = $exif->ImageInfo($tempFile);
 	#print Dumper($exif->GetInfo);
-	if($exif->WriteInfo($tempFile)) {
-		unlink($file);
-		#rename($tempFile, $file);
-	} else {
-		warn "Failed to save Exif data", $exif->GetValue("Error");
-		unlink($tempFile);
+	if(!$self->{dryRun}) {
+		if($exif->WriteInfo($tempFile)) {
+			unlink($file);
+			#rename($tempFile, $file);
+		} else {
+			warn "Failed to save Exif data", $exif->GetValue("Error");
+			unlink($tempFile);
+		}
+		if($self->{verbose}) {
+			my $info = $exif->ImageInfo($tempFile);
+			#print Dumper($exif->GetInfo);
+			utf8::decode($info->{Copyright});
+			print "New UserComment: $info->{UserComment}\n" if exists($info->{UserComment});;
+			print "New Copyright: $info->{Copyright}\n" if exists($info->{Copyright});;
+			print "New GPSLatitude: $info->{GPSLatitude}\n" if exists($info->{GPSLatitude});;
+			print "New GPSLongitude: $info->{GPSLongitude}\n" if exists($info->{GPSLongitude});;
+			print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
+			print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
+		}
+		#unlink($tempFile);
 	}
-	if($self->{verbose}) {
-		my $info = $exif->ImageInfo($tempFile);
-		#print Dumper($exif->GetInfo);
-		utf8::decode($info->{Copyright});
-		print "New UserComment: $info->{UserComment}\n" if exists($info->{UserComment});;
-		print "New Copyright: $info->{Copyright}\n" if exists($info->{Copyright});;
-		print "New GPSLatitude: $info->{GPSLatitude}\n" if exists($info->{GPSLatitude});;
-		print "New GPSLongitude: $info->{GPSLongitude}\n" if exists($info->{GPSLongitude});;
-		print "New GPSAltitude: $info->{GPSAltitude}\n" if exists($info->{GPSAltitude});;
-		print "New GPSAltitudeRef: $info->{GPSAltitudeRef}\n" if exists($info->{GPSAltitudeRef});;
-	}
-	#unlink($tempFile);
 
-	$filename2 = "$outFile$name.jpg";
+	$filename2 = "$outFile$title.jpg";
+
+	if(!$self->{dryRun}) {
+		my $imagesFile = $self->{files}->{images};
+		my $fieldsImage = [
+			"filename",
+			"title",
+			"description",
+			"uuid",
+		];
+		writeDataPC($self, [], $imagesFile, $fieldsImage, 1) if ! -f $imagesFile;
+		appendDataPC($self, [{ filename => $filename, title => $title, description => $description, uuid => $uuid }], $imagesFile, 1, $fieldsImage);
+	}
 	};
 	print STDERR $@ if $@;
 	return $filename2;
 }
 
 sub addImage {
-	my($self, $source, $filename, $doc, $base, $title, $description) = @_;
+	my($self, $source, $filename, $doc, $base) = @_;
 
 	my $path = "$self->{settings}->{cwd}/images/$filename";
 	my $exif = new Image::ExifTool;
@@ -796,6 +839,8 @@ sub addImage {
 	if(exists $info->{DateTimeOriginal}) {
 		$timestamp = parseExifDate($self, $source, $info->{DateTimeOriginal});
 	}
+	my $title = $info->{Title};
+	my $description = $info->{Description};
 	my $latitude;
 	my $longitude;
 	my $altitude;
@@ -831,20 +876,15 @@ sub addImage {
 	addStyle($doc, $mark, 'photo');
 	addPoint($doc, $mark, $latitude, $longitude, $altitude);
 	addPlacemark($doc, $base, $mark);
-	my $fieldsImage = [
-		"filename",
-		"title",
-		"description",
-	];
-	writeDataPC($self, [], 'images.csv', $fieldsImage, 1) if ! -f 'images.csv';
-	appendDataPC($self, [{ filename => $filename, title => $title, description => $description }], 'images.csv', 1, $fieldsImage);
 }
 
 sub param {
 	my($self, $source, $param) = @_;
 
 	my $defaults = $self->{settings}->{defaults};
-	if(defined $source && defined $source->{params}->{$param}) {
+	if(defined $self->{cmdParams}->{$param}) {
+		return $self->{cmdParams}->{$param};
+	} elsif(defined $source && defined $source->{params}->{$param}) {
 		return $source->{params}->{$param};
 	} elsif(defined $source &&
 		defined $defaults->{sources}->{$source->{type}}->{$param}) {

@@ -80,7 +80,7 @@ sub addImageScan {
 	eval {
 		$filename = processImage($self, $source, $path, $title);
 		die "Could not process image '$path'" if !defined($filename);
-		addImage($self, $source, $filename, $doc, $base, $title);
+		addImage($self, $source, $filename, $doc, $base);
 		createThumbnails($self, $source, $filename);
 	};
 }

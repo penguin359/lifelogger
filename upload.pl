@@ -185,9 +185,9 @@ if(defined(upload('file'))) {
 		print "File: '" . $filename . "'\n" if !$text;
 		eval {
 			my $oldFilename = $filename;
-			$filename = processImage($self, $source, "tmp/$filename", $title);
+			$filename = processImage($self, $source, "tmp/$filename", $title, $descr);
 			die "Could not process image 'tmp/$oldFilename'" if !defined($filename);
-			addImage($self, $source, $filename, $doc, $photoBase, $title, $descr);
+			addImage($self, $source, $filename, $doc, $photoBase);
 			createThumbnails($self, $source, $filename);
 		};
 		if($@) {

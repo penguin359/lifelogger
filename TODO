@@ -150,6 +150,7 @@ Check for undefined Subject and Date in email.pl
 Better CGI Handling
   eval over dies such as failed to find source.
   use bytes on escaping
+geotag.pl currently broken, should check all other scripts as well
 and much more...
 
 Windows Issues:
