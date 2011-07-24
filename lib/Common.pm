@@ -41,6 +41,7 @@ use File::Spec;
 use Time::Local;
 use XML::LibXML;
 use Image::ExifTool;
+use UUID;
 #use DBI;
 use Data::Dumper;
 
@@ -384,6 +385,9 @@ sub loadSettings {
 				tzoffset => "",
 			},
 			source => {
+				photos => {
+					path => "",
+				},
 				twitter => {
 				},
 			},
@@ -432,9 +436,11 @@ sub loadSettings {
 	$files->{rss} = "$settings->{cwd}/live.rss";
 	$files->{atom} = "$settings->{cwd}/live.atom";
 
+	$settings->{defaults}->{source}->{basePath} = "$settings->{cwd}/images";
+
 	$settings->{files} = $files;
 
-	print Dumper($settings);
+	#print Dumper($settings);
 }
 
 sub init {
@@ -626,6 +632,13 @@ sub processImage {
 	my $timestamp = $exif->GetValue('DateTimeOriginal');
 	die "No date to use for naming file." if !defined($timestamp);
 	$timestamp = parseExifDate($self, $source, $timestamp);
+
+	my $uuid = $exif->GetValue('ImageUniqueID');
+	if(!defined($uuid)) {
+		UUID::generate($uuid);
+		$uuid = unpack("H32", $uuid);
+		$exif->SetNewValue('ImageUniqueID', $uuid);
+	}
 
 	eval {
 	if((!defined($exif->GetValue('GPSVersionID')) &&

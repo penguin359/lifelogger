@@ -512,8 +512,7 @@ sub closestEntry {
 	my $maxdiff = param($self, $source, 'maxdiff');
 	if($maxdiff >= 0 && $offset > $maxdiff) {
 		die sprintf("Image timestamp (".strftime("%FT%TZ", gmtime($timestamp)).") ".
-			    "not close to any GPS entry (" .strftime("%FT%TZ", gmtime($entry->{timestamp})).
-			    "). Closest offset is %.2f minutes.", $offset/60);
+			    "not close to any GPS entry. Closest offset is %.2f minutes.", $offset/60);
 	}
 
 	return $matchEntry;

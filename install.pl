@@ -90,6 +90,7 @@ foreach my $lib (
     "Bundle::LWP",
     "Image::ExifTool",
     "MIME::Tools",
+    "UUID",
     "XML::LibXML",
     "XML::RSS",
     "XML::Atom") {
