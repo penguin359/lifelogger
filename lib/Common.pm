@@ -347,6 +347,7 @@ sub loadXmlSettings {
 		}
 		foreach($xc->findnodes('param', $node)) {
 			my $name = $_->getAttribute('name');
+			$name = lc $name;
 			if(!defined $name) {
 				warn "Parameter name not specified for source $source->{id}";
 				next;
@@ -355,7 +356,7 @@ sub loadXmlSettings {
 				warn "Parameter value for $name not specified for source $source->{id}";
 				next;
 			}
-			$source->{param}->{$name} = $_->firstChild->nodeValue;
+			$source->{params}->{$name} = $_->firstChild->nodeValue;
 		}
 		push @$sources, $source;
 	}
@@ -387,6 +388,7 @@ sub loadSettings {
 			source => {
 				photos => {
 					path => "",
+					copyright => "",
 				},
 				twitter => {
 				},
@@ -454,7 +456,7 @@ sub init {
 	foreach my $option (@ARGV) {
 		if(!$endOptions &&
 		   $option =~ /^([[:alpha:]][[:alnum:]]*)=(.*)$/) {
-			$self->{cmdParams}->{$1} = $2;
+			$self->{cmdParams}->{lc $1} = $2;
 			next;
 		}
 		$endOptions = 1 if $option eq "--";
@@ -628,7 +630,6 @@ sub processImage {
 	eval {
 	my($self, $source, $file, $title, $description) = @_;
 
-	$title = "Image" if !defined($title);
 	print "Processing image $file.\n" if $self->{verbose};
 	my $fileSize = -s $file;
 	#my $utcTime = 0;
@@ -729,8 +730,10 @@ sub processImage {
 		warn "Orientation not recognized.\n";
 		$rotate = "";
 	}
+	my $ftitle = $title;
+	$ftitle = "Image" if !defined($ftitle);
 	my $outFile = strftime("%m%B/%d%a, %b %e/%H%M%S", localtime($timestamp));
-	my $filename = "$self->{settings}->{cwd}/images/$outFile$title.jpg";
+	my $filename = "$self->{settings}->{cwd}/images/$outFile$ftitle.jpg";
 	my $path = $filename;
 	$path =~ s/[^\/]*$//;
 	mkdirPath($path) if !$self->{dryRun};
@@ -767,18 +770,20 @@ sub processImage {
 	}
 
 	sub setNewValueIfNotExists {
-		my($exif, $name, $value) = @_;
+		my($self, $exif, $name, $value) = @_;
 
+		print "Set Exif($name): '$value'\n" if $self->{debug};
 		$exif->SetNewValue($name, $value) if !defined $exif->GetValue($name);
 	}
 
+	my $copyright = param($self, $source, 'copyright');
 	#Set GeoTagged EXIF data:
 	my $originalName = $file;
 	$originalName =~ s:.*[/\\]::;
-	setNewValueIfNotExists($exif, 'UserComment', 'Original Filename: '.$originalName.', Original Filesize: '.$fileSize.'.');
-	setNewValueIfNotExists($exif, 'Copyright', 'Copyright © 2010 John Doe, All Rights Reserved');
-	setNewValueIfNotExists($exif, 'Title', $title);
-	setNewValueIfNotExists($exif, 'Description', $description) if defined($description);
+	setNewValueIfNotExists($self, $exif, 'UserComment', 'Original Filename: '.$originalName.', Original Filesize: '.$fileSize.'.');
+	setNewValueIfNotExists($self, $exif, 'Copyright', $copyright) if defined $copyright && $copyright ne "";
+	setNewValueIfNotExists($self, $exif, 'Title', $title) if defined $title && $title ne "";
+	setNewValueIfNotExists($self, $exif, 'Description', $description) if defined $description && $description ne "";
 
 	#print Dumper($exif->GetInfo);
 	#my $info = $exif->ImageInfo($tempFile);
@@ -805,18 +810,21 @@ sub processImage {
 		#unlink($tempFile);
 	}
 
-	$filename2 = "$outFile$title.jpg";
+	$filename2 = "$outFile$ftitle.jpg";
 
 	if(!$self->{dryRun}) {
 		my $imagesFile = $self->{files}->{images};
-		my $fieldsImage = [
+		my $requiredFieldsImage = [
 			"filename",
-			"title",
-			"description",
 			"uuid",
 		];
+		my $fieldsImage = [
+			@$requiredFieldsImage,
+			"title",
+			"description",
+		];
 		writeDataPC($self, [], $imagesFile, $fieldsImage, 1) if ! -f $imagesFile;
-		appendDataPC($self, [{ filename => $filename, title => $title, description => $description, uuid => $uuid }], $imagesFile, 1, $fieldsImage);
+		appendDataPC($self, [{ filename => $filename, title => $title, description => $description, uuid => $uuid }], $imagesFile, 1, $requiredFieldsImage);
 	}
 	};
 	print STDERR $@ if $@;
