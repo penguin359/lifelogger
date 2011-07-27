@@ -134,11 +134,11 @@ my $apps = {
 			scope => 'user_photos,user_videos,publish_stream,offline_access',
 		},
 		api => '',
+		tokenParam => 'access_token',
 		handler => \&handleXML,
 	},
 	flickr => {
 		version => 'flickr',
-		authorize => 'http://flickr.com/services/auth/',
 		authorizeParams => {
 			api_key => 'c9d5f00dcc25ab2150e776947a9e3e35',
 			perms => 'read',
@@ -156,17 +156,19 @@ my $apps = {
 		handler => \&handleFlickr,
 	},
 	foursquare => {
-		version => '1.0a',
-                request => 'http://foursquare.com/oauth/request_token',
-                authorize => 'http://foursquare.com/oauth/authorize',
+		version => '2.0',
+                authorize => 'https://foursquare.com/oauth2/authenticate',
 		authorizeParams => {
+			client_id => '5JO5GTM4ZLRSE53RC5TRZN4OGFYJI3PV1BH24Q5OCFQHTL3R',
+			response_type => 'code',
 		},
-                access => 'http://foursquare.com/oauth/access_token',
-		api => 'https://api.foursquare.com/v1/history',
+		api => 'https://api.foursquare.com/v2/users/self/checkins',
 		#apiParams => {
 		#	l => 1,
 		#},
-		handler => \&handleFourSquare,
+		tokenParam => 'oauth_token',
+		#handler => \&handleFourSquare,
+		handler => \&handleXML,
 	},
 	latitude => {
 		version => '1.0a',
@@ -282,9 +284,9 @@ if($cgi->param('refresh')) {
 
 my $saveTokens = 0;
 
-if($a->{version} eq "2.0" && ($cgi->param('code') || $cgi->param('error'))) {
+if($a->{version} eq "2.0" && ($cgi->param('access_token') || $cgi->param('error'))) {
 	$token = "dummy";
-	$tokenSecret = $cgi->param('code');
+	$tokenSecret = $cgi->param('access_token');
 	my $error = $cgi->param('error');
 	my $errorDescription = $cgi->param('error_description');
 	errorResponse("OAuth Authorization: ", $error . ", " . $errorDescription) if $error;
@@ -410,10 +412,9 @@ if($saveTokens) {
 }
 
 if($token ne "") {
-	#print $cgi->header, $cgi->start_html(-Title => 'Google Latitude Location', -encoding => 'utf-8');
 	my $req;
 	if($a->{version} eq "2.0") {
-		$req = GET addCgiParam($a->{api}, { access_token => $tokenSecret });
+		$req = GET addCgiParam($a->{api}, { $a->{tokenParam} => $tokenSecret });
 	} elsif($a->{version} eq "flickr") {
 		my $url = addCgiParam($a->{api}, { auth_token => $tokenSecret, %{$a->{apiParams}} });
 		$req = GET signFlickr($url);
@@ -438,6 +439,7 @@ if($token ne "") {
 			$req = GET $a->{api}, Authorization => requestSign($oauthData, $cgi, $ua);
 		}
 	}
+	#print Dumper $req;
 	my $resp = $ua->request($req);
 
 	if(!$resp->is_success) {
@@ -523,6 +525,7 @@ my $callbackURL = addCgiParam('http://www.north-winds.org/photocatalog/cgi/redir
 
 # App uses OAuth 2.0
 if($a->{version} eq "2.0") {
+	$callbackURL = addCgiParam('http://www.north-winds.org/photocatalog/cgi/oauth2.pl', { redirect_url => $redirectURL, app => $app, debug => $self->{debug} });
 	my $url = addCgiParam($a->{authorize}, { redirect_uri => $callbackURL, %{$a->{authorizeParams}} });
 	sendRedirect($url, $callbackURL);
 	exit 0;
