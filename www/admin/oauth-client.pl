@@ -138,7 +138,6 @@ my $apps = {
 	},
 	flickr => {
 		version => 'flickr',
-		authorize => 'http://flickr.com/services/auth/',
 		authorizeParams => {
 			api_key => 'c9d5f00dcc25ab2150e776947a9e3e35',
 			perms => 'read',
@@ -156,12 +155,12 @@ my $apps = {
 		handler => \&handleFlickr,
 	},
 	foursquare => {
-		version => '1.0a',
-                request => 'http://foursquare.com/oauth/request_token',
-                authorize => 'http://foursquare.com/oauth/authorize',
+		version => '2.0',
+                authorize => 'https://foursquare.com/oauth2/authenticate',
 		authorizeParams => {
+			client_id => '5JO5GTM4ZLRSE53RC5TRZN4OGFYJI3PV1BH24Q5OCFQHTL3R',
+			response_type => 'code',
 		},
-                access => 'http://foursquare.com/oauth/access_token',
 		api => 'https://api.foursquare.com/v1/history',
 		#apiParams => {
 		#	l => 1,
