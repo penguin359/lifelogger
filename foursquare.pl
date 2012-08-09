@@ -41,7 +41,8 @@ use LWP::UserAgent;
 use HTTP::Headers;
 use HTTP::Request;
 use HTTP::Request::Common;
-use Net::OAuth::Local;
+#use Net::OAuth::Local;
+use JSON;
 
 my $usage = "[-id id] [foursquare.xml]";
 my $id;
@@ -65,67 +66,11 @@ if(defined($fourSquareFile)) {
 } else {
 	$source = findSource($self, "FourSquare", $id);
 	$fourSquareFile = $source->{file};
-	$fourSquareFile = 'https://api.foursquare.com/v1/history'
+	my $oauthToken = "";
+	$oauthToken = "?oauth_token=" . $source->{tokenSecret}
+	    if defined $source->{tokenSecret};
+	$fourSquareFile = 'https://api.foursquare.com/v2/users/self/checkins'.$oauthToken
 	    if !defined($fourSquareFile);
-}
-
-# This is a wrapper for LibXML allowing it to pull from URLs as well as
-# from files.  This was shamelessly stolen from XML::DOM.
-sub loadXML {
-	my($url, $source) = @_;
-	my $parser = new XML::LibXML;
-
-	# Any other URL schemes?
-	if($url =~ /^(https?|ftp|wais|gopher|file):/) {
-		# Read the file from the web with LWP.
-		#
-		# Note that we read in the entire file, which may not be ideal
-		# for large files. LWP::UserAgent also provides a callback style
-		# request, which we could convert to a stream with a fork()...
-
-		my $result;
-		eval {
-			use LWP::UserAgent;
-
-			my $ua = LWP::UserAgent->new;
-			my $headers = new HTTP::Headers;
-
-			if(defined($source->{token}) &&
-			   defined($source->{tokenSecret})) {
-				my $oauthData = {
-					protocol => 'oauth 1.0a',
-					app => 'Twitter',
-					type => 'Resource',
-					params => {
-						token => $source->{token},
-						token_secret => $source->{tokenSecret},
-						request_url => $url,
-						request_method => 'GET',
-					},
-				};
-
-				$headers->header('Authorization', requestSign($oauthData)->{authorization});
-			}
-
-			# Load proxy settings from environment variables, i.e.:
-			# http_proxy, ftp_proxy, no_proxy etc. (see LWP::UserAgent(3))
-			# You need these to go thru firewalls.
-			$ua->env_proxy;
-			my $req = new HTTP::Request 'GET', $url, $headers;
-			#print Dumper($req);
-			my $response = $ua->request($req);
-			die "Bad request ".$response->status_line if !$response->is_success;
-
-			# Parse the result of the HTTP request
-			$result = $parser->parse_string($response->content);
-		};
-		if($@) {
-			die "Couldn't parsefile [$url] with LWP: $@";
-		}
-		return $result;
-	} else {
-		return $parser->parse_file($url);
-	}
 }
 
 my $doc = loadKml($self);
@@ -134,21 +79,33 @@ my $containerPath = "/kml:kml/kml:Document/kml:Folder[kml:name='FourSquare']";
 my $containerId = $source->{kml}->{container};
 $containerPath = "//kml:Folder[\@id='$containerId']" if defined($containerId);
 my @base = $xc->findnodes($containerPath, $doc);
-#my $parser = new XML::LibXML;
-#my $fourSquareDoc = $parser->parse_file($fourSquareFile);
-my $fourSquareDoc = loadXML($fourSquareFile, $source);
-my @items = $xc->findnodes('/checkins/checkin', $fourSquareDoc);
+
+my $ua = new LWP::UserAgent;
+my $req = new HTTP::Request 'GET', $fourSquareFile;
+my $response = $ua->request($req);
+die "Bad request ".$response->status_line if !$response->is_success;
+#print Dumper($response);
+
+my $json = new JSON;
+$json->utf8(1);
+my $result = $json->decode($response->content);
+die "Failed to get FourSquare check-ins: ". $result->{meta}->{code} ." - ". $result->{meta}->{errorType} if $result->{meta}->{code} ne 200;
+
+#print Dumper($result);
+#exit 0;
+
+my $items = $result->{response}->{checkins}->{items};
 
 die "Can't find container for FourSquare" if @base != 1;
 
 my $newEntries = [];
 my %style;
 print "List:\n" if $self->{verbose};
-foreach my $item (reverse @items) {
-	my $id        = getTextNode($xc, $item, 'id');
-	my $created   = getTextNode($xc, $item, 'created');
-	my $venue     = getNode($xc, $item, 'venue');
-	my $shout     = getTextNode($xc, $item, 'shout');
+foreach my $item (reverse @$items) {
+	my $id        = $item->{id};
+	my $created   = $item->{createdAt};
+	my $venue     = $item->{venue};
+	my $shout     = $item->{shout};
 	my $name;
 	my $iconPath  = 'None';
 	my $iconUrl   = 'http://foursquare.com/img/categories/none.png';
@@ -156,22 +113,22 @@ foreach my $item (reverse @items) {
 	my $longitude;
 	my $altitude;
 	if($venue) {
-		$name      = getTextNode($xc, $venue, 'name');
-		my $category = getNode($xc, $venue, 'primarycategory');
+		$name      = $venue->{name};
+		my $category = $venue->{categories}->[0];
 		if($category) {
-			$iconPath  = getTextNode($xc, $category, 'fullpathname');
-			$iconUrl   = getTextNode($xc, $category, 'iconurl');
+			$iconPath  = (join '/', @{$category->{parents}}) . "/" . $category->{name};
+			$iconUrl   = $category->{icon};
 		}
-		$latitude  = getTextNode($xc, $venue, 'geolat');
-		$longitude = getTextNode($xc, $venue, 'geolong');
-		$altitude = getTextNode($xc, $venue, 'geoalt');
+		$latitude  = $venue->{location}->{lat};
+		$longitude = $venue->{location}->{lng};
+		#$altitude = $venue->{location}->{lat};
 	} else { die "Shout!" }
-	my $display     = getTextNode($xc, $item, 'display');
+	#my $display     = getTextNode($xc, $item, 'display');
 	if(!defined($created)) {
 		warn "FourSquare check-in with missing created time";
 		next;
 	}
-	my $timestamp = parseDate($created);
+	my $timestamp = $created;
 	my $descr = $shout;
 
 	my @guidMatches = $xc->findnodes("kml:Placemark/kml:ExtendedData/kml:Data[\@name='checkinId']/kml:value[text()='$id']/text()", $base[0]);
