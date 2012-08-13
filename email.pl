@@ -92,6 +92,8 @@ sub scanEntity {
 		my $wd = MIME::WordDecoder->new(['utf-8' => 'KEEP', '*' => \&myToUtf8, 'raw' => \&myFromRaw]);
 		$self->{subject} = $wd->decode($self->{subject});
 		$descrText = decode($entity->head->mime_attr('Content-type.charset'), $descrText);
+		$descrText =~ s/^[[:space:]]*//;
+		$descrText =~ s/[[:space:]]*$//;
 		$descrText = escapeText($self, $descrText);
 	} elsif($entity->head->get('Content-Disposition', 0) =~ /^\s*attachment\s*(?:;.*)?$/) {
 		print "Found other attachment\n" if $self->{verbose};

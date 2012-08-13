@@ -38,10 +38,13 @@ use FindBin;
 use lib "$FindBin::Bin", "$FindBin::Bin/lib";
 use Common;
 
-my $self = init();
+my $usage = "[-lock-time seconds]";
+my $lockTime = 600;
+
+my $self = init($usage, {"lock-time=i" => \$lockTime});
 die $self->{usage} if @ARGV > 0;
 print "Waiting for lock...\n";
 lockKml($self);
-print "Locked for 10 minutes.\n";
-sleep 600;
+print "Locked for $lockTime seconds.\n";
+sleep $lockTime;
 print "Lock released.\n";
