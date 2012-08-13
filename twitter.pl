@@ -144,6 +144,9 @@ my @items = $xc->findnodes('/rss/channel/item', $twitterDoc);
 
 die "Can't find container for Twitter" if @base != 1;
 
+my $last = lastTimestamp($self, $source->{id});
+my $nextId = $last->{id} + 1;
+
 my $newEntries = [];
 print "List:\n" if $self->{verbose};
 foreach my $item (reverse @items) {
@@ -174,15 +177,21 @@ foreach my $item (reverse @items) {
 
 	my $mark = createPlacemark($doc);
 	my $entry = {};
+	eval {
 	if(defined($point) && $point =~ /^\s*(-?\d+(?:.\d*)?)\s+(-?\d+(?:.\d*)?)\s*$/) {
 		($entry->{latitude}, $entry->{longitude}) = ($1, $2);
 		$entry->{key} = $source->{deviceKey};
 		$entry->{source} = $source->{id};
 		$entry->{label} = $source->{name};
 		$entry->{timestamp} = $timestamp;
+		$entry->{id} = $nextId++;
 		push @$newEntries, $entry;
 	} else {
-		$entry = closestEntry($self, $source, $timestamp);
+		$entry = closestEntry($self, $source, $timestamp, $newEntries);
+		if(!defined $entry) {
+			warn "Can't find a valid timestamp matching Tweet";
+			next;
+		}
 	}
 	addName($doc, $mark, $title);
 	addDescription($doc, $mark, "<p>$escapedDescr</p><a href=\"$escapedLink\">Link</a>");
@@ -191,6 +200,10 @@ foreach my $item (reverse @items) {
 	addExtendedData($doc, $mark, { guid => $guid });
 	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
 	addPlacemark($doc, $base[0], $mark);
+	};
+	if($@) {
+		warn "Failed to add Tweet: $@";
+	}
 }
 
 print "Saving location data.\n" if $self->{verbose};

@@ -98,6 +98,9 @@ my $items = $result->{response}->{checkins}->{items};
 
 die "Can't find container for FourSquare" if @base != 1;
 
+my $last = lastTimestamp($self, $source->{id});
+my $nextId = $last->{id} + 1;
+
 my $newEntries = [];
 my %style;
 print "List:\n" if $self->{verbose};
@@ -170,6 +173,7 @@ foreach my $item (reverse @$items) {
 
 	my $mark = createPlacemark($doc);
 	my $entry = {};
+	eval {
 	if(defined($latitude) && defined($longitude)) {
 		$entry->{latitude} = $latitude;
 		$entry->{longitude} = $longitude;
@@ -178,6 +182,7 @@ foreach my $item (reverse @$items) {
 		$entry->{source} = $source->{id};
 		$entry->{label} = $source->{name};
 		$entry->{timestamp} = $timestamp;
+		$entry->{id} = $nextId++;
 		push @$newEntries, $entry;
 	} else {
 		$entry = closestEntry($self, $source, $timestamp);
@@ -193,6 +198,10 @@ foreach my $item (reverse @$items) {
 	addExtendedData($doc, $mark, { checkinId => $id });
 	addPoint($doc, $mark, $entry->{latitude}, $entry->{longitude}, $entry->{altitude});
 	addPlacemark($doc, $base[0], $mark);
+	};
+	if($@) {
+		warn "Failed to add Tweet: $@";
+	}
 }
 
 print "Saving location data.\n" if $self->{verbose};

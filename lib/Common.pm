@@ -337,7 +337,7 @@ sub loadXmlSettings {
 	my @sourceNodes = $xc->findnodes('sources/source', $root);
 	foreach my $node (@sourceNodes) {
 		my $source = {};
-		foreach("id", "type", "name", "deviceKey", "apiKey", "token", "tokenSecret", "file", "url") {
+		foreach("id", "type", "name", "deviceKey", "apiKey", "token", "tokenSecret", "file", "screenName", "url") {
 			my $val = getTextNode($xc, $node, $_);
 			$source->{$_} = $val if defined $val;
 		}

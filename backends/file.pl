@@ -497,13 +497,13 @@ sub readData {
 }
 
 sub closestEntry {
-	my($self, $source, $timestamp) = @_;
+	my($self, $source, $timestamp, $extraEntries) = @_;
 
 	my $entries = readData($self);
 	return undef if @$entries == 0;
 	my $matchEntry = $entries->[0];
 	my $offset = abs($matchEntry->{timestamp} - $timestamp);
-	foreach my $entry (@$entries) {
+	foreach my $entry (@$entries, @$extraEntries) {
 		if(abs($entry->{timestamp} - $timestamp) < $offset) {
 			$matchEntry = $entry;
 			$offset = abs($entry->{timestamp} - $timestamp);
