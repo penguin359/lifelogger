@@ -30,7 +30,26 @@ sub index :Path :Args(0) {
     my ( $self, $c ) = @_;
 
     # Hello World
-    $c->response->body( $c->welcome_message );
+    #$c->response->body( $c->welcome_message );
+    $c->stash->{template} = 'templates/index.tt';
+
+    $c->forward($c->view('HTML'));
+}
+
+=head2 default
+
+Standard 404 error page
+
+=cut
+
+sub test :Global :Args(0) {
+    my ( $self, $c ) = @_;
+
+    $c->stash->{template} = 'templates/main.tt';
+    $c->stash->{data}->{title} = 'First TT Rendered Page';
+    $c->stash->{data}->{message} = 'It works!';
+
+    $c->forward($c->view('HTML'));
 }
 
 =head2 default
