@@ -1,0 +1,4 @@
+TEST_POD=1 PERL5LIB=../lib perl controller_OAuth.t
+CATALYST_DEBUG=0 PERL5LIB=lib prove
+TEST_POD=1 PERL5LIB=../lib perl 02pod.t
+CATALYST_DEBUG=0 prove -wl t
