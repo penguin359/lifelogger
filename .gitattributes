@@ -1,0 +1,4 @@
+/.git* export-ignore
+/.hg* export-ignore
+/.travis.yml export-ignore
+/.openshift export-ignore

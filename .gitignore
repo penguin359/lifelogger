@@ -1,6 +1,8 @@
+*.swp
+.AppleDouble
 /examples/aliases
-/examples/cronta$
-/examples/procmalrc$
+/examples/crontab
+/examples/procmailrc
 /images/
 /images.csv
 /lib/OAuthConf.pm
