@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 #
 # Copyright (c) 2009, Loren M. Lang
 # All rights reserved.
@@ -60,6 +60,7 @@ sub ask {
 }
 
 my $activePerl = 0;
+my $perlbrew = 0;
 my $autoinstall = '?';
 
 sub installLib {
@@ -77,9 +78,27 @@ sub installLib {
 			print "Not installing dependencies.\n" if !$autoinstall;
 			print "\n";
 		}
+		if(defined($ENV{PERLBREW_ROOT})) {
+			print "You appear to be using PerlBrew\n";
+			if(-x "$ENV{PERLBREW_ROOT}/bin/cpanm") {
+				print "Do you want to automatically install dependencies? ";
+				my $ans = <>;
+				chomp($ans);
+				$perlbrew = 1;
+				$autoinstall = 1 if $ans =~ /^y(es)?$/i;
+				print "Not installing dependencies.\n" if !$autoinstall;
+				print "\n";
+			} else {
+				print "However, I can't find cpanm. You will need\n";
+				print "to install dependencies manually.\n";
+			}
+		}
 	}
 	if($autoinstall && $activePerl) {
 		system("ppm", "install", $lib);
+	}
+	if($autoinstall && $perlbrew) {
+		system("cpanm", "install", $lib);
 	}
 }
 
@@ -88,12 +107,21 @@ print "\n";
 print "Checking dependencies...\n";
 foreach my $lib (
     "Bundle::LWP",
+    "Catalyst", # 5.9000
+    "Catalyst::Action::RenderView",
+    "Catalyst::Plugin::Static::Simple",
+    "Catalyst::Plugin::ConfigLoader",
+    "Catalyst::View::TT",
+    "CGI",
+    "Config::General",
     "Image::ExifTool",
+    "JSON",
     "MIME::Tools",
+    "Term::Size::Any", # Optional
     "UUID",
     "XML::LibXML",
-    "XML::RSS",
-    "XML::Atom") {
+    "XML::RSS", # Optional
+    "XML::Atom") { # Optional
 	if(!eval "require $lib") {
 		print STDERR "Need to install $lib\n";
 		if($lib eq "XML::RSS" || $lib eq "XML::Atom") {
