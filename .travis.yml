@@ -18,3 +18,6 @@ install: true
 
 script:
         - "(cd t && ./backend.t)"
+
+notifications:
+        irc: "irc.north-winds.org#main"
