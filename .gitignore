@@ -1,4 +1,5 @@
 *.swp
+.AppleDouble
 /examples/aliases
 /examples/crontab
 /examples/procmailrc
