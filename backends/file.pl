@@ -36,8 +36,17 @@ use Fcntl qw(:seek);
 use POSIX qw(strftime);
 
 
-my $dataFile = "$settings->{cwd}/location.csv";
-my $timestampFile = "$settings->{cwd}/timestamp";
+sub getDataFile {
+	my($self) = @_;
+
+	return "$self->{settings}->{cwd}/location.csv";
+}
+
+sub getTimestampFile {
+	my($self) = @_;
+
+	return "$self->{settings}->{cwd}/timestamp";
+}
 
 sub parseDataIM {
 	my($self, $lines, $update) = @_;
@@ -236,7 +245,7 @@ sub updateLastTimestamp {
 	my @entries = ();
 	push @entries, _lastTimestamp($self, $_)
 	    foreach(keys %{$self->{sourcesId}});
-	writeDataPC($self, \@entries, $timestampFile, $fieldsTimestamp);
+	writeDataPC($self, \@entries, getTimestampFile($self), $fieldsTimestamp);
 }
 
 sub _lastTimestamp {
@@ -271,7 +280,7 @@ sub lastTimestamp {
 	# Check if specific id declared.
 	return _lastTimestamp($self, $id)
 	    if defined($self->{lastTimestamp});
-	if(open(my $fd, "<", $timestampFile)) {
+	if(open(my $fd, "<", getTimestampFile($self))) {
 		my @lines = <$fd>;
 		close $fd;
 		if(@lines > 1) {
@@ -380,7 +389,7 @@ sub writeDataIM {
 
 	my $update = 0;
 	if(!defined($file)) {
-		$file = $dataFile;
+		$file = getDataFile($self);
 		$update = 1;
 	}
 	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
@@ -395,7 +404,7 @@ sub writeDataPC {
 
 	my $update = 0;
 	if(!defined($file)) {
-		$file = $dataFile;
+		$file = getDataFile($self);
 		$update = 1;
 	}
 	open(my $fd, ">", $file) or die "Can't Write InstaMapper updates";
@@ -420,7 +429,7 @@ sub appendDataIM {
 
 	my $update = 0;
 	if(!defined($file)) {
-		$file = $dataFile;
+		$file = getDataFile($self);
 		$update = 1;
 	}
 	open(my $fd, ">>", $file) or die "Can't append InstaMapper updates";
@@ -434,7 +443,7 @@ sub appendDataPC {
 
 	my $update = 0;
 	if(!defined($file)) {
-		$file = $dataFile;
+		$file = getDataFile($self);
 		$update = 1;
 	}
 	open(my $fd, "+<", $file) or die "Can't append PhotoCatalog updates";
@@ -455,7 +464,7 @@ sub appendData {
 	my($self, $entries, $file, $quote) = @_;
 
 	my $appendFile = $file;
-	$appendFile = $dataFile if !defined($appendFile);
+	$appendFile = getDataFile($self) if !defined($appendFile);
 	open(my $fd, "<", $appendFile) or die "Can't append updates";
 
 	my $version = <$fd>;
@@ -479,7 +488,7 @@ sub readData {
 	if(!defined($file)) {
 		return $self->{data} if exists($self->{data});
 
-		open($fd, $dataFile) or die "Can't open data file";
+		open($fd, getDataFile($self)) or die "Can't open data file";
 		my @lines = <$fd>;
 		close $fd;
 

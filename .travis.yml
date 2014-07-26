@@ -1,0 +1,20 @@
+language: perl
+perl:
+        - "5.16"
+        - "5.14"
+        - "5.8"
+
+before_install:
+        - "sudo apt-get update"
+        - "sudo apt-get install libwww-perl"
+        - "sudo apt-get install libimage-exiftool-perl"
+        - "sudo apt-get install libmime-tools-perl"
+        - "sudo apt-get install libuuid-perl"
+        - "sudo apt-get install libxml-libxml-perl"
+        - "sudo apt-get install libxml-rss-perl"
+        - "sudo apt-get install libxml-atom-perl"
+
+install: true
+
+script:
+        - "(cd t && ./backend.t)"
