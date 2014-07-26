@@ -1,0 +1,16 @@
+Bundle::LWP
+Catalyst
+Catalyst::Action::RenderView
+Catalyst::Plugin::Static::Simple
+Catalyst::Plugin::ConfigLoader
+Catalyst::View::TT
+CGI
+Config::General
+Image::ExifTool
+JSON
+MIME::Tools
+Term::Size::Any
+UUID
+XML::LibXML
+XML::RSS
+XML::Atom
