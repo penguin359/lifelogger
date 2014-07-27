@@ -35,4 +35,4 @@ ok(!defined($val), "Invalid timestamp");
 eval { $val = closestEntry($self, $self->{sources}->[0], 1324567890); };
 ok(defined($val), "Valid timestamp");
 
-ok($val->{timestamp} == 13245678760, "Correct timestamp");
+ok($val->{timestamp} == 1324567876, "Correct timestamp");
